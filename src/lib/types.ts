@@ -6,6 +6,7 @@ export interface Student {
   parentPhone: string;
   dollars: number;
   joinedAt: string;
+  pin: string; // 학생 비밀번호 (기본값 '1111')
 }
 
 export interface DollarCondition {

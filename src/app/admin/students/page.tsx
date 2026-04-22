@@ -3,10 +3,12 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { Student } from '@/lib/types';
-import { Plus, Edit2, Trash2, Phone, DollarSign, X } from 'lucide-react';
+import { sheetsSync } from '@/lib/sheets';
+import { Plus, Edit2, Trash2, X, KeyRound } from 'lucide-react';
 
 function StudentModal({ student, onSave, onClose }: { student: Partial<Student> | null; onSave: (s: Student) => void; onClose: () => void }) {
-  const [form, setForm] = useState<Partial<Student>>(student || {});
+  const [form, setForm] = useState<Partial<Student>>(student || { pin: '1111' });
+  const [showPin, setShowPin] = useState(false);
   const set = (k: keyof Student, v: string) => setForm(f => ({ ...f, [k]: v }));
 
   const save = () => {
@@ -18,6 +20,7 @@ function StudentModal({ student, onSave, onClose }: { student: Partial<Student> 
       parentPhone: form.parentPhone || '',
       dollars: Number(form.dollars) || 0,
       joinedAt: form.joinedAt || new Date().toISOString().slice(0, 10),
+      pin: form.pin || '1111',
     });
   };
 
@@ -53,6 +56,24 @@ function StudentModal({ student, onSave, onClose }: { student: Partial<Student> 
             <input value={form.parentPhone || ''} onChange={e => set('parentPhone', e.target.value)} placeholder="010-0000-0000" />
           </div>
           <div>
+            <label style={{ fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <KeyRound size={13} color="#6366f1" /> 학생 비밀번호
+              <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 400 }}>(기본값 1111)</span>
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPin ? 'text' : 'password'}
+                value={form.pin || '1111'}
+                onChange={e => set('pin', e.target.value.replace(/\D/g, '').slice(0, 4))}
+                placeholder="4자리 숫자"
+                maxLength={4}
+              />
+              <button type="button" onClick={() => setShowPin(s => !s)} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: 12 }}>
+                {showPin ? '숨기기' : '보기'}
+              </button>
+            </div>
+          </div>
+          <div>
             <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>등록일</label>
             <input type="date" value={form.joinedAt || new Date().toISOString().slice(0, 10)} onChange={e => set('joinedAt', e.target.value)} />
           </div>
@@ -71,13 +92,25 @@ export default function StudentsPage() {
   const [modal, setModal] = useState<Partial<Student> | null | false>(false);
   const [search, setSearch] = useState('');
 
-  const filtered = state.students.filter(s => s.name.includes(search) || s.grade.includes(search) || s.classGroup.includes(search));
+  const filtered = state.students.filter(s =>
+    s.name.includes(search) || s.grade.includes(search) || s.classGroup.includes(search)
+  );
 
   const save = (s: Student) => {
-    state.students.find(x => x.id === s.id)
-      ? dispatch({ type: 'UPDATE_STUDENT', payload: s })
-      : dispatch({ type: 'ADD_STUDENT', payload: s });
+    if (state.students.find(x => x.id === s.id)) {
+      dispatch({ type: 'UPDATE_STUDENT', payload: s });
+    } else {
+      dispatch({ type: 'ADD_STUDENT', payload: s });
+    }
+    // Google Sheets 동기화
+    sheetsSync.student(s);
     setModal(false);
+  };
+
+  const del = (s: Student) => {
+    if (confirm(`${s.name} 학생을 삭제하시겠습니까?`)) {
+      dispatch({ type: 'DELETE_STUDENT', payload: s.id });
+    }
   };
 
   return (
@@ -90,7 +123,7 @@ export default function StudentsPage() {
         <button className="btn btn-primary" onClick={() => setModal({})}><Plus size={15} /> 학생 등록</button>
       </div>
 
-      <div className="card" style={{ marginBottom: 16, padding: 12 }}>
+      <div className="card" style={{ marginBottom: 14, padding: 12 }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="이름, 학년, 반 검색..." />
       </div>
 
@@ -103,6 +136,7 @@ export default function StudentsPage() {
                 <th>학년</th>
                 <th>반</th>
                 <th>학부모</th>
+                <th>비밀번호</th>
                 <th>달러</th>
                 <th>등록일</th>
                 <th>관리</th>
@@ -120,12 +154,18 @@ export default function StudentsPage() {
                   <td><span style={{ background: '#f1f5f9', padding: '3px 8px', borderRadius: 6, fontSize: 12 }}>{s.grade}</span></td>
                   <td><span className="badge badge-blue">{s.classGroup}</span></td>
                   <td style={{ color: '#64748b', fontSize: 13 }}>{s.parentPhone || '-'}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 5, color: '#94a3b8', fontSize: 13 }}>
+                      <KeyRound size={12} />
+                      {'●'.repeat(s.pin?.length || 4)}
+                    </div>
+                  </td>
                   <td><span style={{ fontWeight: 800, color: '#7c3aed' }}>${s.dollars}</span></td>
                   <td style={{ color: '#94a3b8', fontSize: 12 }}>{s.joinedAt}</td>
                   <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setModal(s)} style={{ background: '#eff6ff', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 6 }}><Edit2 size={13} color="#3b82f6" /></button>
-                      <button onClick={() => { if (confirm(`${s.name} 삭제?`)) dispatch({ type: 'DELETE_STUDENT', payload: s.id }); }} style={{ background: '#fef2f2', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 6 }}><Trash2 size={13} color="#ef4444" /></button>
+                      <button onClick={() => del(s)} style={{ background: '#fef2f2', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 6 }}><Trash2 size={13} color="#ef4444" /></button>
                     </div>
                   </td>
                 </tr>
@@ -133,6 +173,7 @@ export default function StudentsPage() {
             </tbody>
           </table>
         </div>
+        {filtered.length === 0 && <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>검색 결과 없음</div>}
       </div>
 
       {modal !== false && <StudentModal student={modal} onSave={save} onClose={() => setModal(false)} />}

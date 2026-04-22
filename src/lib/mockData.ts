@@ -5,11 +5,11 @@ const week = getWeekKey();
 
 export const initialData: AppData = {
   students: [
-    { id: 's1', name: '김민준', grade: '중1', classGroup: 'A반', parentPhone: '010-1234-5678', dollars: 45, joinedAt: '2024-03-01' },
-    { id: 's2', name: '이서연', grade: '중2', classGroup: 'A반', parentPhone: '010-2345-6789', dollars: 62, joinedAt: '2024-03-01' },
-    { id: 's3', name: '박지호', grade: '중1', classGroup: 'B반', parentPhone: '010-3456-7890', dollars: 28, joinedAt: '2024-04-01' },
-    { id: 's4', name: '최수아', grade: '중3', classGroup: 'B반', parentPhone: '010-4567-8901', dollars: 80, joinedAt: '2024-02-01' },
-    { id: 's5', name: '정도윤', grade: '중2', classGroup: 'A반', parentPhone: '010-5678-9012', dollars: 15, joinedAt: '2024-05-01' },
+    { id: 's1', name: '김민준', grade: '중1', classGroup: 'A반', parentPhone: '010-1234-5678', dollars: 45, joinedAt: '2024-03-01', pin: '1111' },
+    { id: 's2', name: '이서연', grade: '중2', classGroup: 'A반', parentPhone: '010-2345-6789', dollars: 62, joinedAt: '2024-03-01', pin: '1111' },
+    { id: 's3', name: '박지호', grade: '중1', classGroup: 'B반', parentPhone: '010-3456-7890', dollars: 28, joinedAt: '2024-04-01', pin: '1111' },
+    { id: 's4', name: '최수아', grade: '중3', classGroup: 'B반', parentPhone: '010-4567-8901', dollars: 80, joinedAt: '2024-02-01', pin: '1111' },
+    { id: 's5', name: '정도윤', grade: '중2', classGroup: 'A반', parentPhone: '010-5678-9012', dollars: 15, joinedAt: '2024-05-01', pin: '1111' },
   ],
   dollarConditions: [
     { id: 'c1', name: '출석 완료', amount: 4, description: '주간 수업 모두 출석', enabled: true, type: 'attendance' },

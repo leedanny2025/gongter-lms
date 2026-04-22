@@ -1,19 +1,15 @@
-// Google Sheets 연동 (Apps Script Web App URL 설정 필요)
-// NEXT_PUBLIC_SHEETS_URL 환경 변수에 Apps Script 배포 URL 설정
-
-const SHEETS_URL = process.env.NEXT_PUBLIC_SHEETS_URL || '';
+// Google Sheets 연동
+// 브라우저 → /api/sheets (Next.js API 라우트) → Apps Script Web App → Google Sheets
 
 async function post(data: Record<string, unknown>) {
-  if (!SHEETS_URL) return; // URL 미설정 시 조용히 무시
   try {
-    await fetch(SHEETS_URL, {
+    await fetch('/api/sheets', {
       method: 'POST',
-      body: JSON.stringify(data),
       headers: { 'Content-Type': 'application/json' },
-      mode: 'no-cors', // Apps Script CORS 우회
+      body: JSON.stringify(data),
     });
   } catch {
-    // 네트워크 오류 무시 (로컬 상태는 정상 동작)
+    // 네트워크 오류 시 조용히 무시 (로컬 상태는 정상 동작)
   }
 }
 
@@ -37,4 +33,11 @@ export const sheetsSync = {
   dollar: (data: {
     studentName: string; amount: number; reason: string; newBalance: number;
   }) => post({ type: 'dollar', ...data }),
+
+  student: (data: {
+    id: string; name: string; grade: string; classGroup: string;
+    dollars: number; pin: string; joinedAt: string;
+  }) => post({ type: 'student', ...data }),
+
+  init: () => fetch('/api/sheets?action=init').catch(() => {}),
 };

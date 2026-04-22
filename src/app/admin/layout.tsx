@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Calendar, BookOpen, ClipboardCheck, DollarSign, Settings, GraduationCap, LogOut } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, BookOpen, ClipboardCheck, DollarSign, Settings, GraduationCap, LogOut, QrCode } from 'lucide-react';
 import AdminAuthScreen, { useAdminAuth } from '@/components/AdminAuth';
 
 const navItems = [
@@ -13,6 +13,7 @@ const navItems = [
   { href: '/admin/homework', label: '숙제', icon: BookOpen },
   { href: '/admin/tests', label: '시험', icon: ClipboardCheck },
   { href: '/admin/dollars', label: '달러', icon: DollarSign },
+  { href: '/admin/qr', label: 'QR 코드', icon: QrCode },
   { href: '/admin/settings', label: '설정', icon: Settings },
 ];
 
