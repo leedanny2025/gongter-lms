@@ -43,6 +43,7 @@ export interface DayHomework {
   completedAt?: string;
   approvedAt?: string;
   note?: string;
+  expectedSubmitDate?: string;
 }
 
 export interface TestRecord {

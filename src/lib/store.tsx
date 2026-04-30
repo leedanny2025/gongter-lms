@@ -19,7 +19,7 @@ type Action =
   | { type: 'APPROVE_HOMEWORK'; payload: string }
   | { type: 'REJECT_HOMEWORK'; payload: string }
   | { type: 'AGREE_HOMEWORK'; payload: string }
-  | { type: 'COMPLETE_HOMEWORK'; payload: { id: string; note?: string } }
+  | { type: 'COMPLETE_HOMEWORK'; payload: { id: string; note?: string; expectedSubmitDate?: string } }
   | { type: 'CONFIRM_HOMEWORK'; payload: { id: string; result: 'confirmed' | 'rejected' } }
   | { type: 'SET_ATTITUDE_SETTINGS'; payload: AttitudeDollarSettings }
   | { type: 'CONFIRM_TEST'; payload: { id: string; score: number } }
@@ -71,7 +71,7 @@ function reducer(state: AppData, action: Action): AppData {
     case 'APPROVE_HOMEWORK': return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload ? { ...h, status: 'approved', approvedAt: new Date().toISOString() } : h) };
     case 'REJECT_HOMEWORK':  return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload ? { ...h, status: 'rejected' } : h) };
     case 'AGREE_HOMEWORK':   return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload ? { ...h, status: 'agreed', agreedAt: new Date().toISOString() } : h) };
-    case 'COMPLETE_HOMEWORK': return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload.id ? { ...h, status: 'submitted', completedAt: new Date().toISOString(), note: action.payload.note } : h) };
+    case 'COMPLETE_HOMEWORK': return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload.id ? { ...h, status: 'submitted', completedAt: new Date().toISOString(), note: action.payload.note, expectedSubmitDate: action.payload.expectedSubmitDate } : h) };
     case 'CONFIRM_HOMEWORK': return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload.id ? { ...h, status: action.payload.result, approvedAt: new Date().toISOString() } : h) };
     case 'SET_ATTITUDE_SETTINGS': return { ...state, attitudeDollarSettings: action.payload };
     case 'ADD_TEST':     return { ...state, testRecords: [...state.testRecords, action.payload] };
@@ -289,7 +289,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
       case 'COMPLETE_HOMEWORK': {
         const hw = s.dayHomeworks.find(h => h.id === action.payload.id);
-        if (hw) fbSet(`lms/homework/${hw.id}`, { ...hw, status: 'submitted', completedAt: new Date().toISOString(), note: action.payload.note }); break;
+        if (hw) fbSet(`lms/homework/${hw.id}`, { ...hw, status: 'submitted', completedAt: new Date().toISOString(), note: action.payload.note, expectedSubmitDate: action.payload.expectedSubmitDate }); break;
       }
       case 'CONFIRM_HOMEWORK': {
         const hw = s.dayHomeworks.find(h => h.id === action.payload.id);

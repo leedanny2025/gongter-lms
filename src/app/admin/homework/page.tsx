@@ -25,12 +25,67 @@ const STATUS_META: Record<HomeworkStatus, { label: string; bg: string; color: st
 
 const CAT_LABELS: Record<string, string> = { computer: '컴퓨터', textbook: '교재', vocabulary: '단어', other: '문법' };
 
+const ALL_DAYS: HomeworkDay[] = ['mon', 'tue', 'wed', 'thu', 'fri'];
+
 function isActive(h: DayHomework) {
   return !['confirmed', 'approved', 'missed', 'rejected'].includes(h.status);
 }
 
 function isDone(h: DayHomework) {
   return h.status === 'confirmed' || h.status === 'approved';
+}
+
+// ── Create Homework Modal (admin creates directly as agreed) ─────────────────
+function CreateHomeworkModal({ student, day, week, onSave, onClose }: {
+  student: Student;
+  day: HomeworkDay;
+  week: string;
+  onSave: (hw: DayHomework) => void;
+  onClose: () => void;
+}) {
+  const [form, setForm] = useState({ computer: '', textbook: '', vocabulary: '', other: '' });
+  const handleSave = () => {
+    const hw: DayHomework = {
+      id: `hw-${student.id}-${week}-${day}-${Date.now()}`,
+      studentId: student.id,
+      studentName: student.name,
+      week,
+      day,
+      computer: form.computer,
+      textbook: form.textbook,
+      vocabulary: form.vocabulary,
+      other: form.other,
+      submittedAt: new Date().toISOString(),
+      agreedAt: new Date().toISOString(),
+      status: 'agreed',
+    };
+    onSave(hw);
+  };
+  return (
+    <div className="modal-backdrop">
+      <div className="modal" style={{ maxWidth: 460 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+          <div>
+            <div style={{ fontWeight: 700, fontSize: 16 }}>숙제 등록</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>{student.name} · {DAY_LABELS[day]}요일</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+        {(['computer', 'textbook', 'vocabulary', 'other'] as const).map(cat => (
+          <div key={cat} style={{ marginBottom: 10 }}>
+            <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>{CAT_LABELS[cat]}</label>
+            <textarea value={form[cat]} onChange={e => setForm(f => ({ ...f, [cat]: e.target.value }))}
+              rows={2} placeholder={`${CAT_LABELS[cat]} 내용`}
+              style={{ width: '100%', padding: '7px 10px', borderRadius: 8, border: '1.5px solid #e2e8f0', fontSize: 13, resize: 'vertical', fontFamily: 'inherit' }} />
+          </div>
+        ))}
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>취소</button>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={handleSave}>등록</button>
+        </div>
+      </div>
+    </div>
+  );
 }
 
 // ── Edit Modal ───────────────────────────────────────────────────────────────
@@ -145,6 +200,15 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
           )}
         </div>
 
+        {/* 완료 예정일 표시 */}
+        {hw.expectedSubmitDate && (
+          <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', marginBottom: 16, border: '1px solid #bbf7d0' }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>
+              📅 완료 예정일: {new Date(hw.expectedSubmitDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+            </div>
+          </div>
+        )}
+
         {/* 구분선 */}
         <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: 16 }} />
 
@@ -249,6 +313,22 @@ export default function HomeworkPage() {
   const [detailHW, setDetailHW] = useState<DayHomework | null>(null);
   const [missedSel, setMissedSel] = useState<Set<string>>(new Set());
   const [nameSearch, setNameSearch] = useState('');
+  const [addHWTarget, setAddHWTarget] = useState<{ student: Student; day: HomeworkDay } | null>(null);
+
+  // Homework sequential numbers per student (sorted by submittedAt), across ALL weeks
+  const hwNumbers = useMemo(() => {
+    const nums = new Map<string, number>();
+    const byStudent: Record<string, DayHomework[]> = {};
+    state.dayHomeworks.forEach(hw => {
+      if (!byStudent[hw.studentId]) byStudent[hw.studentId] = [];
+      byStudent[hw.studentId].push(hw);
+    });
+    Object.values(byStudent).forEach(hws => {
+      hws.sort((a, b) => (a.submittedAt || '').localeCompare(b.submittedAt || ''));
+      hws.forEach((hw, i) => nums.set(hw.id, i + 1));
+    });
+    return nums;
+  }, [state.dayHomeworks]);
 
   // ── 기본 데이터 ─────────────────────────────────────────────────────────
   const globalDaysRaw = new Set(state.students.flatMap(s => s.scheduleDays || []));
@@ -362,7 +442,7 @@ export default function HomeworkPage() {
     type Row = { key: string; student: Student; day: HomeworkDay; hw: DayHomework | null };
     const rows: Row[] = [];
     filteredStudents.forEach(student => {
-      scheduledDays.forEach(day => {
+      ALL_DAYS.forEach(day => {
         if (!studentScheduledFor(student, day)) return;
         const hw = weekHW.find(h => h.studentId === student.id && h.day === day) ?? null;
         rows.push({ key: `${student.id}-${day}`, student, day, hw });
@@ -381,7 +461,7 @@ export default function HomeworkPage() {
       if (pd !== 0) return pd;
       return a.student.name.localeCompare(b.student.name);
     });
-  }, [weekHW, filteredStudents, scheduledDays]);
+  }, [weekHW, filteredStudents]);
 
   const activeCount = allWeekRows.filter(r => r.hw && isActive(r.hw)).length;
   const unrecordedCount = allWeekRows.filter(r => !r.hw).length;
@@ -399,7 +479,7 @@ export default function HomeworkPage() {
     if (statusFilter === 'all') return filteredStudents;
     return filteredStudents.filter(s => {
       const hw = weekHW.filter(h => h.studentId === s.id);
-      const hasUnrecorded = scheduledDays.some(d =>
+      const hasUnrecorded = ALL_DAYS.some(d =>
         studentScheduledFor(s, d) && !hw.some(h => h.day === d)
       );
       if (statusFilter === 'active') return hw.some(h => isActive(h)) || hasUnrecorded;
@@ -407,7 +487,7 @@ export default function HomeworkPage() {
       if (statusFilter === 'missed') return hw.some(h => h.status === 'missed');
       return true;
     });
-  }, [statusFilter, filteredStudents, weekHW, scheduledDays]);
+  }, [statusFilter, filteredStudents, weekHW]);
 
   // ── Table 2: 상태 필터 적용된 행 목록 ────────────────────────────────────
   const filteredWeekRows = useMemo(() => {
@@ -516,28 +596,43 @@ export default function HomeworkPage() {
         <div style={{ overflowX: 'auto', borderRadius: 14, border: '1px solid #e2e8f0', background: 'white' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
             <thead>
+              {/* Row 1 */}
+              <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                <th rowSpan={2} style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap', minWidth: 80, borderBottom: '2px solid #e2e8f0', verticalAlign: 'middle' }}>학생</th>
+                <th colSpan={5} style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: '#1e40af', background: '#eff6ff', borderBottom: '1px solid #bfdbfe', borderLeft: '1px solid #e2e8f0' }}>
+                  📝 숙제 합의
+                </th>
+                <th colSpan={5} style={{ padding: '8px 12px', textAlign: 'center', fontWeight: 700, color: '#15803d', background: '#f0fdf4', borderBottom: '1px solid #bbf7d0', borderLeft: '1px solid #e2e8f0' }}>
+                  ✅ 숙제 완료
+                </th>
+                <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#6366f1', minWidth: 90, whiteSpace: 'nowrap', borderLeft: '2px solid #e2e8f0', borderBottom: '2px solid #e2e8f0', verticalAlign: 'middle' }}>
+                  주간결산
+                </th>
+                <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#f59e0b', minWidth: 90, whiteSpace: 'nowrap', borderBottom: '2px solid #e2e8f0', verticalAlign: 'middle' }}>
+                  월간결산
+                </th>
+                <th rowSpan={2} style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#0ea5e9', minWidth: 90, whiteSpace: 'nowrap', borderBottom: '2px solid #e2e8f0', verticalAlign: 'middle' }}>
+                  전체결산
+                </th>
+              </tr>
+              {/* Row 2: day labels for both sections */}
               <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                <th style={{ padding: '10px 16px', textAlign: 'left', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap', minWidth: 80 }}>학생</th>
-                {scheduledDays.map(day => (
-                  <th key={day} style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#475569', minWidth: 80 }}>
-                    {DAY_LABELS[day]}요일
+                {ALL_DAYS.map((day, i) => (
+                  <th key={`agree-day-${day}`} style={{ padding: '6px 10px', textAlign: 'center', fontWeight: 600, color: '#1e40af', minWidth: 72, fontSize: 12, background: '#eff6ff', borderLeft: i === 0 ? '1px solid #e2e8f0' : undefined }}>
+                    {DAY_LABELS[day]}
                   </th>
                 ))}
-                <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#6366f1', minWidth: 90, whiteSpace: 'nowrap', borderLeft: '2px solid #e2e8f0' }}>
-                  주간 결산
-                </th>
-                <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#f59e0b', minWidth: 90, whiteSpace: 'nowrap' }}>
-                  월간 결산
-                </th>
-                <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#0ea5e9', minWidth: 90, whiteSpace: 'nowrap' }}>
-                  전체 결산
-                </th>
+                {ALL_DAYS.map((day, i) => (
+                  <th key={`done-day-${day}`} style={{ padding: '6px 10px', textAlign: 'center', fontWeight: 600, color: '#15803d', minWidth: 72, fontSize: 12, background: '#f0fdf4', borderLeft: i === 0 ? '1px solid #e2e8f0' : undefined }}>
+                    {DAY_LABELS[day]}
+                  </th>
+                ))}
               </tr>
             </thead>
             <tbody>
               {table1Students.length === 0 ? (
                 <tr>
-                  <td colSpan={scheduledDays.length + 4} style={{ padding: 24, textAlign: 'center', color: '#cbd5e1', fontSize: 13 }}>
+                  <td colSpan={14} style={{ padding: 24, textAlign: 'center', color: '#cbd5e1', fontSize: 13 }}>
                     해당 카테고리의 학생이 없습니다
                   </td>
                 </tr>
@@ -558,39 +653,72 @@ export default function HomeworkPage() {
                           <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 400 }}>{student.classGroup}</div>
                         )}
                       </td>
-                      {scheduledDays.map(day => {
+
+                      {/* 합의 section: 5 cells */}
+                      {ALL_DAYS.map((day, i) => {
                         const hw = studentWeekHW.find(h => h.day === day);
-                        if (!studentScheduledFor(student, day)) {
-                          return <td key={day} style={{ padding: '10px 12px', textAlign: 'center', color: '#e2e8f0', fontSize: 11 }}>–</td>;
-                        }
+                        const isScheduled = studentScheduledFor(student, day);
+                        const hwNum = hw ? hwNumbers.get(hw.id) : null;
+                        const agreementDate = hw?.agreedAt || hw?.submittedAt;
+                        const dateStr = agreementDate ? new Date(agreementDate).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' }) : null;
+
                         if (!hw) {
                           return (
-                            <td key={day} style={{ padding: '8px 10px', textAlign: 'center' }}>
-                              <span style={{ fontSize: 11, color: '#cbd5e1' }}>미기록</span>
+                            <td key={`agree-${day}`} style={{ padding: '8px 6px', textAlign: 'center', background: isScheduled ? 'white' : '#f1f5f9', borderLeft: i === 0 ? '1px solid #e2e8f0' : undefined }}>
+                              {isScheduled ? (
+                                <button onClick={() => setAddHWTarget({ student, day })} style={{ fontSize: 10, color: '#cbd5e1', background: 'none', border: '1px dashed #e2e8f0', borderRadius: 6, padding: '3px 8px', cursor: 'pointer', minHeight: 'unset' }}>
+                                  + 등록
+                                </button>
+                              ) : (
+                                <span style={{ fontSize: 10, color: '#e2e8f0' }}>–</span>
+                              )}
                             </td>
                           );
                         }
+
                         const m = STATUS_META[hw.status];
-                        const clickable = isActive(hw); // 처리 가능한 상태만 강조
                         return (
-                          <td key={day} style={{ padding: '8px 6px', textAlign: 'center' }}>
-                            <button
-                              onClick={() => setDetailHW(hw)}
-                              title={clickable ? '클릭하여 승인/반려' : m.label}
-                              style={{
-                                padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
-                                background: m.bg, color: m.color,
-                                border: clickable ? `1.5px solid ${m.color}` : `1px solid ${m.color}30`,
-                                cursor: 'pointer',
-                                display: 'inline-flex', alignItems: 'center', gap: 3, minHeight: 'unset',
-                                boxShadow: clickable ? `0 0 0 2px ${m.color}20` : 'none',
-                              }}
-                            >
-                              {m.label}
+                          <td key={`agree-${day}`} style={{ padding: '6px 4px', textAlign: 'center', background: isScheduled ? 'white' : '#f1f5f9', borderLeft: i === 0 ? '1px solid #e2e8f0' : undefined }}>
+                            <button onClick={() => setDetailHW(hw)} style={{ padding: '3px 8px', borderRadius: 8, fontSize: 10, fontWeight: 700, background: m.bg, color: m.color, border: `1px solid ${m.color}40`, cursor: 'pointer', minHeight: 'unset', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, width: '100%' }}>
+                              {hwNum && <span style={{ fontSize: 9, fontWeight: 800, opacity: 0.7 }}>#{hwNum}</span>}
+                              <span>{m.label}</span>
+                              {dateStr && <span style={{ fontSize: 9, fontWeight: 400, opacity: 0.75 }}>{dateStr}</span>}
                             </button>
                           </td>
                         );
                       })}
+
+                      {/* 완료 section: 5 cells */}
+                      {ALL_DAYS.map((day, i) => {
+                        const hw = studentWeekHW.find(h => h.day === day);
+                        const isScheduled = studentScheduledFor(student, day);
+                        const hwNum = hw ? hwNumbers.get(hw.id) : null;
+                        const isCompletePhase = hw && ['submitted', 'confirmed', 'approved'].includes(hw.status);
+                        const expectedDate = hw?.expectedSubmitDate
+                          ? new Date(hw.expectedSubmitDate).toLocaleDateString('ko-KR', { month: 'numeric', day: 'numeric' })
+                          : null;
+
+                        return (
+                          <td key={`done-${day}`} style={{ padding: '6px 4px', textAlign: 'center', background: isScheduled ? '#fafffe' : '#f1f5f9', borderLeft: i === 0 ? '1px solid #e2e8f0' : undefined }}>
+                            {isCompletePhase ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2 }}>
+                                {hwNum && <span style={{ fontSize: 9, fontWeight: 800, color: '#94a3b8' }}>#{hwNum}</span>}
+                                {expectedDate ? (
+                                  <span style={{ fontSize: 10, fontWeight: 700, color: '#15803d', background: '#d1fae5', padding: '2px 6px', borderRadius: 6 }}>{expectedDate}</span>
+                                ) : (
+                                  <span style={{ fontSize: 9, color: '#cbd5e1' }}>날짜 미입력</span>
+                                )}
+                                {(hw.status === 'confirmed' || hw.status === 'approved') && (
+                                  <span style={{ fontSize: 9, color: '#15803d' }}>✓완료</span>
+                                )}
+                              </div>
+                            ) : (
+                              <span style={{ fontSize: 10, color: '#e2e8f0' }}>–</span>
+                            )}
+                          </td>
+                        );
+                      })}
+
                       {/* 주간 결산 */}
                       <td style={{ padding: '10px 12px', textAlign: 'center', borderLeft: '2px solid #f1f5f9' }}>
                         {weekRec === 0 ? (
@@ -643,16 +771,34 @@ export default function HomeworkPage() {
               <tfoot>
                 <tr style={{ background: '#f8fafc', borderTop: '2px solid #e2e8f0' }}>
                   <td style={{ padding: '10px 16px', fontWeight: 800, color: '#475569', fontSize: 13 }}>합계</td>
-                  {scheduledDays.map(day => {
+                  {/* 합의 days */}
+                  {ALL_DAYS.map((day, i) => {
                     const dayRec = weekHW.filter(h => h.day === day && h.status !== 'missed' && table1Students.some(s => s.id === h.studentId)).length;
                     const dayDone = weekHW.filter(h => h.day === day && isDone(h) && table1Students.some(s => s.id === h.studentId)).length;
                     const dayTotal = table1Students.filter(s => studentScheduledFor(s, day)).length;
                     return (
-                      <td key={day} style={{ padding: '10px 12px', textAlign: 'center' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#475569' }}>
+                      <td key={`tfoot-agree-${day}`} style={{ padding: '10px 6px', textAlign: 'center', borderLeft: i === 0 ? '1px solid #e2e8f0' : undefined }}>
+                        <div style={{ fontSize: 12, fontWeight: 700, color: '#1e40af' }}>
                           {dayRec}<span style={{ color: '#cbd5e1', fontWeight: 400 }}>/{dayTotal}</span>
                         </div>
                         {dayDone > 0 && <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 700 }}>완료 {dayDone}</div>}
+                      </td>
+                    );
+                  })}
+                  {/* 완료 days */}
+                  {ALL_DAYS.map((day, i) => {
+                    const dayCompleted = weekHW.filter(h => h.day === day && ['submitted', 'confirmed', 'approved'].includes(h.status) && table1Students.some(s => s.id === h.studentId)).length;
+                    const dayApproved = weekHW.filter(h => h.day === day && isDone(h) && table1Students.some(s => s.id === h.studentId)).length;
+                    return (
+                      <td key={`tfoot-done-${day}`} style={{ padding: '10px 6px', textAlign: 'center', borderLeft: i === 0 ? '1px solid #e2e8f0' : undefined }}>
+                        {dayCompleted > 0 ? (
+                          <div>
+                            <span style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>{dayCompleted}</span>
+                            {dayApproved > 0 && <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 700 }}>승인 {dayApproved}</div>}
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: 11, color: '#e2e8f0' }}>–</span>
+                        )}
                       </td>
                     );
                   })}
@@ -886,6 +1032,15 @@ export default function HomeworkPage() {
           hw={editHW}
           onSave={updated => { dispatch({ type: 'UPDATE_HOMEWORK', payload: updated }); setEditHW(null); }}
           onClose={() => setEditHW(null)}
+        />
+      )}
+      {addHWTarget && (
+        <CreateHomeworkModal
+          student={addHWTarget.student}
+          day={addHWTarget.day}
+          week={week}
+          onSave={(hw) => { dispatch({ type: 'ADD_HOMEWORK', payload: hw }); setAddHWTarget(null); }}
+          onClose={() => setAddHWTarget(null)}
         />
       )}
     </div>

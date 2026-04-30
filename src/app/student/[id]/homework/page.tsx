@@ -241,6 +241,8 @@ export default function StudentHomeworkPage() {
   const [isEditing, setIsEditing] = useState(false);
   const [uncheckedUids, setUncheckedUids] = useState<Set<string>>(new Set());
 
+  const [expectedDate, setExpectedDate] = useState('');
+
   const [rangeCat, setRangeCat] = useState<CatKey>('computer');
   const [rangeSub, setRangeSub] = useState('');
   const [rangeText, setRangeText] = useState('');
@@ -268,6 +270,7 @@ export default function StudentHomeworkPage() {
     setUncheckedUids(new Set());
     setRangeSub('');
     setRangeText('');
+    setExpectedDate('');
     const rec = state.dayHomeworks.find(h => h.studentId === id && h.week === week && h.day === day);
     setRangeItems(rec && (rec.status === 'pending' || rec.status === 'rejected') ? hwToItems(rec) : []);
   };
@@ -318,7 +321,7 @@ export default function StudentHomeworkPage() {
     const checkedItems = hwToItems(existing).filter(i => !uncheckedUids.has(i.uid));
     if (checkedItems.length === 0) return;
     const note = checkedItems.map(i => `${i.cat}:${i.text}`).join('|');
-    dispatch({ type: 'COMPLETE_HOMEWORK', payload: { id: existing.id, note } });
+    dispatch({ type: 'COMPLETE_HOMEWORK', payload: { id: existing.id, note, expectedSubmitDate: expectedDate || undefined } });
     setUncheckedUids(new Set());
   };
 
@@ -530,6 +533,15 @@ export default function StudentHomeworkPage() {
                 </div>
               );
             })}
+            <div style={{ marginTop: 12, background: '#f0fdf4', borderRadius: 12, padding: '12px 14px', border: '1px solid #bbf7d0' }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 8 }}>📅 숙제 완료 예정일 (선택)</div>
+              <input
+                type="date"
+                value={expectedDate}
+                onChange={e => setExpectedDate(e.target.value)}
+                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #86efac', fontSize: 14, background: 'white', outline: 'none', boxSizing: 'border-box' }}
+              />
+            </div>
             {(() => {
               const checkedCount = displayItems.filter(i => !uncheckedUids.has(i.uid)).length;
               return (
