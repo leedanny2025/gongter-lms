@@ -213,15 +213,18 @@ export default function HomeworkPage() {
   const [editHW, setEditHW] = useState<DayHomework | null>(null);
   const [detailHW, setDetailHW] = useState<DayHomework | null>(null);
   const [missedSel, setMissedSel] = useState<Set<string>>(new Set());
+  const [nameSearch, setNameSearch] = useState('');
 
   // ── 기본 데이터 ─────────────────────────────────────────────────────────
   const globalDaysRaw = new Set(state.students.flatMap(s => s.scheduleDays || []));
   const globalDays = globalDaysRaw.size > 0 ? globalDaysRaw : new Set(['mon','tue','wed','thu','fri']);
   const classGroups = ['전체', ...new Set(state.students.map(s => s.classGroup))];
 
-  const filteredStudents = state.students.filter(s =>
-    classFilter === '전체' || s.classGroup === classFilter
-  );
+  const filteredStudents = state.students.filter(s => {
+    if (classFilter !== '전체' && s.classGroup !== classFilter) return false;
+    if (nameSearch.trim() && !s.name.includes(nameSearch.trim())) return false;
+    return true;
+  });
 
   const weekHW = state.dayHomeworks.filter(h =>
     h.week === week && filteredStudents.some(s => s.id === h.studentId)
@@ -383,6 +386,21 @@ export default function HomeworkPage() {
           <p style={{ color: '#64748b', marginTop: 2, fontSize: 13 }}>주간 숙제 현황 · ① 합의 → ② 진행중 → ③ 완료확인 → ④ 완료</p>
         </div>
         <WeekSelector week={week} onChange={setWeek} />
+      </div>
+
+      {/* ── 이름 검색 ── */}
+      <div style={{ marginBottom: 14 }}>
+        <input
+          type="text"
+          placeholder="학생 이름 검색..."
+          value={nameSearch}
+          onChange={e => setNameSearch(e.target.value)}
+          style={{
+            width: '100%', maxWidth: 280, padding: '8px 14px', borderRadius: 10,
+            border: '1.5px solid #e2e8f0', fontSize: 14, outline: 'none',
+            background: 'white', boxSizing: 'border-box',
+          }}
+        />
       </div>
 
       {/* ── 반 필터 ── */}

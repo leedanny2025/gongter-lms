@@ -362,28 +362,61 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  // 초기 로드 + 15초마다 폴링 (로컬 액션 5초 이내면 폴링 스킵)
+  // Firebase SSE 실시간 스트리밍 (변경 즉시 반영)
   useEffect(() => {
-    const POLL_INTERVAL = 15 * 1000; // 15초
-    const LOCAL_GRACE = 5 * 1000;    // 로컬 액션 후 5초간 폴링 skip
+    const FB_URL = 'https://gongteo--lms-default-rtdb.firebaseio.com';
+    const LOCAL_GRACE = 3 * 1000;
+    let es: EventSource | null = null;
+    let fallbackInterval: ReturnType<typeof setInterval> | null = null;
 
-    const load = (isInitial = false) => fbGet('lms').then(data => {
+    const applyData = (data: unknown, isInitial = false) => {
       if (!isInitial && Date.now() - lastLocalActionRef.current < LOCAL_GRACE) return;
-
       if (data && typeof data === 'object') {
         applyFirebaseData(data as Record<string, unknown>, rawDispatch);
         const storedWeek = (data as Record<string, unknown>).currentWeek as string | undefined;
-        const actualWeek = getWeekKey();
-        if (storedWeek && storedWeek !== actualWeek) {
-          dispatch({ type: 'WEEK_RESET', payload: actualWeek });
+        if (storedWeek && storedWeek !== getWeekKey()) {
+          dispatch({ type: 'WEEK_RESET', payload: getWeekKey() });
         }
       }
       setReady(true);
-    }).catch(() => setReady(true));
+    };
 
-    load(true);
-    const interval = setInterval(() => load(false), POLL_INTERVAL);
-    return () => clearInterval(interval);
+    const connectSSE = () => {
+      try {
+        es = new EventSource(`${FB_URL}/lms.json`);
+        es.addEventListener('put', (e: MessageEvent) => {
+          try {
+            const { data } = JSON.parse(e.data) as { path: string; data: unknown };
+            applyData(data);
+          } catch {}
+        });
+        es.addEventListener('patch', () => {
+          // patch 이벤트 시 전체 재로드
+          fbGet('lms').then(d => applyData(d)).catch(() => {});
+        });
+        es.onerror = () => {
+          es?.close();
+          es = null;
+          // SSE 실패 시 15초 폴링으로 폴백
+          if (!fallbackInterval) {
+            fallbackInterval = setInterval(() => {
+              fbGet('lms').then(d => applyData(d)).catch(() => {});
+            }, 15000);
+          }
+        };
+      } catch {
+        es = null;
+      }
+    };
+
+    // 초기 로드
+    fbGet('lms').then(d => applyData(d, true)).catch(() => setReady(true));
+    connectSSE();
+
+    return () => {
+      es?.close();
+      if (fallbackInterval) clearInterval(fallbackInterval);
+    };
   }, []);
 
   const canUndo = undoStackLen > 0;
