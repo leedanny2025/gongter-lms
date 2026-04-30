@@ -343,6 +343,16 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       undoStackRef.current = [...undoStackRef.current.slice(-14), undoEntry];
       setUndoStackLen(undoStackRef.current.length);
     }
+
+    // 쓰기 액션 후 5초 뒤 Firebase 상태 재확인 (grace period 만료 후)
+    const writeActions = new Set(['ADD_STUDENT','UPDATE_STUDENT','DELETE_STUDENT','ADD_HOMEWORK','UPDATE_HOMEWORK','APPROVE_HOMEWORK','REJECT_HOMEWORK','AGREE_HOMEWORK','COMPLETE_HOMEWORK','CONFIRM_HOMEWORK','ADD_TEST','UPDATE_TEST','CONFIRM_TEST','ADD_ATTENDANCE','UPDATE_ATTENDANCE','DELETE_ATTENDANCE','ADD_ATTITUDE','UPDATE_ATTITUDE','DELETE_ATTITUDE','AWARD_DOLLARS','ADD_MAKEUP','UPDATE_MAKEUP','SET_WEEK','WEEK_RESET']);
+    if (writeActions.has(action.type)) {
+      setTimeout(() => {
+        fbGet('lms').then(data => {
+          if (data && typeof data === 'object') applyFirebaseData(data as Record<string, unknown>, rawDispatch);
+        }).catch(() => {});
+      }, 5000);
+    }
   }, []);
 
   const refresh = useCallback(async () => {
@@ -352,13 +362,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  // 초기 로드 + 5분마다 폴링 (로컬 액션 30초 이내면 폴링 스킵)
+  // 초기 로드 + 15초마다 폴링 (로컬 액션 5초 이내면 폴링 스킵)
   useEffect(() => {
-    const POLL_INTERVAL = 5 * 60 * 1000; // 5분
-    const LOCAL_GRACE = 30 * 1000;        // 로컬 액션 후 30초간 폴링 skip
+    const POLL_INTERVAL = 15 * 1000; // 15초
+    const LOCAL_GRACE = 5 * 1000;    // 로컬 액션 후 5초간 폴링 skip
 
     const load = (isInitial = false) => fbGet('lms').then(data => {
-      // 초기 로드가 아니고 최근 로컬 액션이 있으면 Firebase 데이터로 덮어쓰지 않음
       if (!isInitial && Date.now() - lastLocalActionRef.current < LOCAL_GRACE) return;
 
       if (data && typeof data === 'object') {
