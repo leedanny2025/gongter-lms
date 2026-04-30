@@ -5,7 +5,12 @@ import { useStore } from '@/lib/store';
 import { CheckCircle, XCircle, Edit2, X, AlertCircle } from 'lucide-react';
 import { DayHomework, Student } from '@/lib/types';
 import WeekSelector from '@/components/WeekSelector';
-import { DAY_LABELS, DAY_ORDER } from '@/lib/utils';
+import { DAY_LABELS, DAY_ORDER, getWeekDateRange } from '@/lib/utils';
+
+function weekToMonth(weekKey: string): string {
+  const { start } = getWeekDateRange(weekKey);
+  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, '0')}`;
+}
 import { HomeworkStatus, HomeworkDay } from '@/lib/types';
 
 const STATUS_META: Record<HomeworkStatus, { label: string; bg: string; color: string }> = {
@@ -70,11 +75,22 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
   const m = STATUS_META[hw.status];
   const hasContent = hw.computer || hw.textbook || hw.vocabulary || hw.other;
 
+  const STAGE_INFO: Record<string, { step: number; title: string; desc: string; icon: string }> = {
+    pending:   { step: 1, title: '합의 대기 중',  desc: '교사와 숙제 범위를 합의하는 단계입니다', icon: '🤝' },
+    agreed:    { step: 2, title: '숙제 진행 중',  desc: '합의된 숙제를 학생이 진행하는 단계입니다', icon: '✏️' },
+    submitted: { step: 3, title: '완료 확인 중',  desc: '학생이 제출 — 교사 최종 확인이 필요합니다', icon: '📬' },
+    confirmed: { step: 4, title: '완료',          desc: '교사가 최종 승인한 숙제입니다', icon: '✅' },
+    approved:  { step: 4, title: '완료',          desc: '교사가 최종 승인한 숙제입니다', icon: '✅' },
+    rejected:  { step: 0, title: '반려됨',         desc: '교사에 의해 반려 처리된 숙제입니다', icon: '❌' },
+    missed:    { step: 0, title: '미이행',         desc: '기한 내 숙제를 이행하지 않았습니다', icon: '⚠️' },
+  };
+  const stage = STAGE_INFO[hw.status] ?? { step: 0, title: hw.status, desc: '', icon: '?' };
+
   return (
     <div className="modal-backdrop">
       <div className="modal" style={{ maxWidth: 500 }}>
         {/* 헤더 */}
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
           <div>
             <div style={{ fontWeight: 800, fontSize: 18 }}>{hw.studentName}</div>
             <div style={{ fontSize: 13, color: '#64748b', marginTop: 3 }}>
@@ -87,6 +103,25 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, flexShrink: 0 }}>
             <X size={20} color="#94a3b8" />
           </button>
+        </div>
+
+        {/* 진행 단계 표시 */}
+        <div style={{ background: m.bg, borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span style={{ fontSize: 28 }}>{stage.icon}</span>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: m.color }}>{stage.title}</div>
+            <div style={{ fontSize: 12, color: m.color, opacity: 0.8, marginTop: 2 }}>{stage.desc}</div>
+          </div>
+          {stage.step > 0 && (
+            <div style={{ marginLeft: 'auto', display: 'flex', gap: 4 }}>
+              {[1,2,3,4].map(n => (
+                <div key={n} style={{
+                  width: 8, height: 8, borderRadius: '50%',
+                  background: n <= stage.step ? m.color : `${m.color}30`,
+                }} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* 숙제 내용 */}
@@ -222,13 +257,13 @@ export default function HomeworkPage() {
 
   const filteredStudents = state.students.filter(s => {
     if (classFilter !== '전체' && s.classGroup !== classFilter) return false;
-    if (nameSearch.trim() && !s.name.includes(nameSearch.trim())) return false;
+    const q = nameSearch.trim();
+    if (q && !s.name.includes(q) && !(s.classGroup ?? '').includes(q)) return false;
     return true;
   });
 
-  const weekHW = state.dayHomeworks.filter(h =>
-    h.week === week && filteredStudents.some(s => s.id === h.studentId)
-  );
+  // weekHW: 전체 학생 기준으로 필터 (filteredStudents 의존 제거 → 타이밍 버그 방지)
+  const weekHW = state.dayHomeworks.filter(h => h.week === week);
 
   const scheduledDays = useMemo(() =>
     DAY_ORDER.filter(d => globalDays.has(d)), [globalDays]);
@@ -306,9 +341,19 @@ export default function HomeworkPage() {
   const allTimeDoneCount = (studentId: string) =>
     state.dayHomeworks.filter(h => h.studentId === studentId && isDone(h)).length;
 
-  // 주간 합계 총합 (맨 아래 행용)
+  // 월간 결산
+  const currentMonth = weekToMonth(week);
+  const monthHW = state.dayHomeworks.filter(h => weekToMonth(h.week) === currentMonth);
+  const monthRecordCount = (studentId: string) =>
+    monthHW.filter(h => h.studentId === studentId && h.status !== 'missed').length;
+  const monthDoneCount = (studentId: string) =>
+    monthHW.filter(h => h.studentId === studentId && isDone(h)).length;
+
+  // 합계 총합 (맨 아래 행용)
   const weekTotalRecord = filteredStudents.reduce((sum, s) => sum + weekRecordCount(s.id), 0);
   const weekTotalDone = filteredStudents.reduce((sum, s) => sum + weekDoneCount(s.id), 0);
+  const monthTotalRecord = filteredStudents.reduce((sum, s) => sum + monthRecordCount(s.id), 0);
+  const monthTotalDone = filteredStudents.reduce((sum, s) => sum + monthDoneCount(s.id), 0);
   const allTimeTotalRecord = filteredStudents.reduce((sum, s) => sum + allTimeRecordCount(s.id), 0);
   const allTimeTotalDone = filteredStudents.reduce((sum, s) => sum + allTimeDoneCount(s.id), 0);
 
@@ -392,7 +437,7 @@ export default function HomeworkPage() {
       <div style={{ marginBottom: 14 }}>
         <input
           type="text"
-          placeholder="학생 이름 검색..."
+          placeholder="이름 또는 반 검색..."
           value={nameSearch}
           onChange={e => setNameSearch(e.target.value)}
           style={{
@@ -481,6 +526,9 @@ export default function HomeworkPage() {
                 <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#6366f1', minWidth: 90, whiteSpace: 'nowrap', borderLeft: '2px solid #e2e8f0' }}>
                   주간 결산
                 </th>
+                <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#f59e0b', minWidth: 90, whiteSpace: 'nowrap' }}>
+                  월간 결산
+                </th>
                 <th style={{ padding: '10px 12px', textAlign: 'center', fontWeight: 700, color: '#0ea5e9', minWidth: 90, whiteSpace: 'nowrap' }}>
                   전체 결산
                 </th>
@@ -489,7 +537,7 @@ export default function HomeworkPage() {
             <tbody>
               {table1Students.length === 0 ? (
                 <tr>
-                  <td colSpan={scheduledDays.length + 3} style={{ padding: 24, textAlign: 'center', color: '#cbd5e1', fontSize: 13 }}>
+                  <td colSpan={scheduledDays.length + 4} style={{ padding: 24, textAlign: 'center', color: '#cbd5e1', fontSize: 13 }}>
                     해당 카테고리의 학생이 없습니다
                   </td>
                 </tr>
@@ -498,6 +546,8 @@ export default function HomeworkPage() {
                   const studentWeekHW = weekHW.filter(h => h.studentId === student.id);
                   const weekRec = weekRecordCount(student.id);
                   const weekDone = weekDoneCount(student.id);
+                  const monthRec = monthRecordCount(student.id);
+                  const monthDone = monthDoneCount(student.id);
                   const allTimeRec = allTimeRecordCount(student.id);
                   const allTimeDone = allTimeDoneCount(student.id);
                   return (
@@ -555,6 +605,20 @@ export default function HomeworkPage() {
                           </div>
                         )}
                       </td>
+                      {/* 월간 결산 */}
+                      <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                        {monthRec === 0 ? (
+                          <span style={{ fontSize: 12, color: '#cbd5e1' }}>–</span>
+                        ) : (
+                          <div>
+                            <span style={{ fontWeight: 800, fontSize: 15, color: '#f59e0b' }}>{monthRec}</span>
+                            <span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 2 }}>건</span>
+                            {monthDone > 0 && (
+                              <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 700 }}>완료 {monthDone}</div>
+                            )}
+                          </div>
+                        )}
+                      </td>
                       {/* 전체 결산 */}
                       <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                         {allTimeRec === 0 ? (
@@ -595,6 +659,10 @@ export default function HomeworkPage() {
                   <td style={{ padding: '10px 12px', textAlign: 'center', borderLeft: '2px solid #e2e8f0' }}>
                     <div style={{ fontWeight: 900, fontSize: 16, color: '#6366f1' }}>{weekTotalRecord}<span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 2, fontWeight: 400 }}>건</span></div>
                     {weekTotalDone > 0 && <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 700 }}>완료 {weekTotalDone}</div>}
+                  </td>
+                  <td style={{ padding: '10px 12px', textAlign: 'center' }}>
+                    <div style={{ fontWeight: 900, fontSize: 16, color: '#f59e0b' }}>{monthTotalRecord}<span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 2, fontWeight: 400 }}>건</span></div>
+                    {monthTotalDone > 0 && <div style={{ fontSize: 10, color: '#22c55e', fontWeight: 700 }}>완료 {monthTotalDone}</div>}
                   </td>
                   <td style={{ padding: '10px 12px', textAlign: 'center' }}>
                     <div style={{ fontWeight: 900, fontSize: 16, color: '#0ea5e9' }}>{allTimeTotalRecord}<span style={{ fontSize: 10, color: '#94a3b8', marginLeft: 2, fontWeight: 400 }}>건</span></div>
