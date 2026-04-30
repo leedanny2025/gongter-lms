@@ -79,16 +79,16 @@ export default function QRPage() {
       color: '#6366f1',
     },
     {
-      url: `${baseUrl}/checkin?class=A반`,
-      title: 'A반 출석 체크',
-      sub: 'QR 스캔 → 이름 선택 → 출석',
+      url: `${baseUrl}/checkin`,
+      title: '입실 체크 (공용)',
+      sub: 'QR 스캔 → 이름 입력 → 입실',
       color: '#22c55e',
     },
     {
-      url: `${baseUrl}/checkin?class=B반`,
-      title: 'B반 출석 체크',
-      sub: 'QR 스캔 → 이름 선택 → 출석',
-      color: '#3b82f6',
+      url: `${baseUrl}/checkout`,
+      title: '퇴원 체크 (공용)',
+      sub: 'QR 스캔 → 이름 입력 → 퇴원',
+      color: '#f59e0b',
     },
   ];
 
@@ -109,7 +109,8 @@ export default function QRPage() {
             <div style={{ fontWeight: 700, fontSize: 14, color: '#4338ca' }}>사용 방법</div>
             <ul style={{ margin: '6px 0 0', paddingLeft: 16, fontSize: 13, color: '#4338ca', lineHeight: 2 }}>
               <li><strong>학생 포털 QR</strong> — 학부모/학생에게 공유 → 숙제·시험·출석 앱 바로 접속</li>
-              <li><strong>반별 출석 QR</strong> — 교실 부착 → 학생이 스캔 → 이름 선택 → 출석 완료</li>
+              <li><strong>입실 체크 QR</strong> — 입구에 부착 → 학생이 스캔 → 이름 입력 → 입실 완료</li>
+              <li><strong>퇴원 체크 QR</strong> — 출구에 부착 → 학생이 스캔 → 이름 입력 → 퇴원 완료</li>
             </ul>
           </div>
         </div>

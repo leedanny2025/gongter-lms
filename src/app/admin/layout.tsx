@@ -1,29 +1,35 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Users, Calendar, BookOpen, ClipboardCheck, DollarSign, Settings, GraduationCap, LogOut, QrCode } from 'lucide-react';
+import { LayoutDashboard, Users, Calendar, BookOpen, ClipboardCheck, DollarSign, Settings, GraduationCap, LogOut, QrCode, Star, Undo2, FileText } from 'lucide-react';
 import AdminAuthScreen, { useAdminAuth } from '@/components/AdminAuth';
+import { useStore } from '@/lib/store';
 
 const navItems = [
-  { href: '/admin', label: '대시보드', icon: LayoutDashboard },
-  { href: '/admin/students', label: '학생', icon: Users },
-  { href: '/admin/attendance', label: '출석', icon: Calendar },
-  { href: '/admin/homework', label: '숙제', icon: BookOpen },
-  { href: '/admin/tests', label: '시험', icon: ClipboardCheck },
-  { href: '/admin/dollars', label: '달러', icon: DollarSign },
-  { href: '/admin/qr', label: 'QR 코드', icon: QrCode },
-  { href: '/admin/settings', label: '설정', icon: Settings },
+  { href: '/admin',            label: '대시보드', icon: LayoutDashboard },
+  { href: '/admin/students',   label: '학생',     icon: Users },
+  { href: '/admin/attendance', label: '출석',     icon: Calendar },
+  { href: '/admin/homework',   label: '숙제',     icon: BookOpen },
+  { href: '/admin/tests',      label: '시험',     icon: ClipboardCheck },
+  { href: '/admin/attitude',   label: '태도',     icon: Star },
+  { href: '/admin/dollars',    label: '달러',     icon: DollarSign },
+  { href: '/admin/reports',   label: '리포트',   icon: FileText },
+  { href: '/admin/qr',         label: 'QR',       icon: QrCode },
+  { href: '/admin/settings',   label: '설정',     icon: Settings },
 ];
 
 function Sidebar({ pathname }: { pathname: string }) {
   const { logout } = useAdminAuth();
   return (
-    <aside className="admin-sidebar" style={{ width: 220, minHeight: '100vh', background: '#1e293b', display: 'flex', flexDirection: 'column', flexShrink: 0 }}>
-      <div style={{ padding: '20px 16px', borderBottom: '1px solid #334155' }}>
+    <aside style={{
+      width: 200, minHeight: '100vh', background: '#1e293b',
+      display: 'flex', flexDirection: 'column', flexShrink: 0,
+    }}>
+      <div style={{ padding: '18px 14px', borderBottom: '1px solid #334155' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ background: '#6366f1', borderRadius: 10, padding: 8 }}>
+          <div style={{ background: '#6366f1', borderRadius: 10, padding: 8, flexShrink: 0 }}>
             <GraduationCap size={18} color="white" />
           </div>
           <div>
@@ -32,7 +38,7 @@ function Sidebar({ pathname }: { pathname: string }) {
           </div>
         </div>
       </div>
-      <nav style={{ flex: 1, padding: '10px 8px' }}>
+      <nav style={{ flex: 1, padding: '10px 8px', overflowY: 'auto' }}>
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return (
@@ -58,41 +64,90 @@ function Sidebar({ pathname }: { pathname: string }) {
 }
 
 function MobileBottomNav({ pathname }: { pathname: string }) {
-  const topItems = navItems.slice(0, 5);
   return (
-    <nav className="mobile-only" style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: '#1e293b', display: 'flex', zIndex: 50, borderTop: '1px solid #334155', paddingBottom: 'env(safe-area-inset-bottom)' }}>
-      {topItems.map(({ href, label, icon: Icon }) => {
-        const active = pathname === href;
-        return (
-          <Link key={href} href={href} style={{
-            flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center',
-            padding: '10px 0', textDecoration: 'none', gap: 3,
-            color: active ? '#a5b4fc' : '#64748b',
-            borderTop: active ? '2px solid #6366f1' : '2px solid transparent',
-          }}>
-            <Icon size={19} />
-            <span style={{ fontSize: 10, fontWeight: active ? 700 : 400 }}>{label}</span>
-          </Link>
-        );
-      })}
+    <nav style={{
+      position: 'fixed', bottom: 0, left: 0, right: 0,
+      background: '#1e293b', zIndex: 50,
+      borderTop: '1px solid #334155',
+      paddingBottom: 'env(safe-area-inset-bottom)',
+    }}>
+      <div style={{
+        display: 'flex', overflowX: 'auto',
+        WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
+        scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
+      }}>
+        {navItems.map(({ href, label, icon: Icon }) => {
+          const active = pathname === href;
+          return (
+            <Link key={href} href={href} style={{
+              flex: '0 0 auto', minWidth: 60,
+              display: 'flex', flexDirection: 'column', alignItems: 'center',
+              padding: '10px 6px', textDecoration: 'none', gap: 3,
+              color: active ? '#a5b4fc' : '#64748b',
+              borderTop: active ? '2px solid #6366f1' : '2px solid transparent',
+            }}>
+              <Icon size={18} />
+              <span style={{ fontSize: 9, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{label}</span>
+            </Link>
+          );
+        })}
+      </div>
     </nav>
+  );
+}
+
+function UndoBar() {
+  const { undo, canUndo, undoLabel } = useStore();
+  if (!canUndo) return null;
+  return (
+    <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 14 }}>
+      <button
+        onClick={undo}
+        title={`되돌리기: ${undoLabel}`}
+        style={{
+          display: 'flex', alignItems: 'center', gap: 8,
+          padding: '8px 16px', borderRadius: 8,
+          background: '#1e293b', color: 'white',
+          border: 'none', cursor: 'pointer', fontWeight: 600, fontSize: 13,
+          boxShadow: '0 2px 8px rgba(0,0,0,0.18)',
+        }}
+      >
+        <Undo2 size={14} />
+        <span>되돌리기</span>
+        <span style={{ fontSize: 11, color: '#94a3b8', fontWeight: 400 }}>{undoLabel}</span>
+      </button>
+    </div>
   );
 }
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   const { authed, checked, login } = useAdminAuth();
   const pathname = usePathname();
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const check = () => setIsMobile(window.innerWidth <= 768);
+    check();
+    window.addEventListener('resize', check);
+    return () => window.removeEventListener('resize', check);
+  }, []);
 
   if (!checked) return null;
   if (!authed) return <AdminAuthScreen onAuth={login} />;
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
-      <Sidebar pathname={pathname} />
-      <main className="admin-content" style={{ flex: 1, padding: '24px 28px', overflowY: 'auto', background: '#f8fafc', paddingBottom: 80 }}>
+      {!isMobile && <Sidebar pathname={pathname} />}
+      <main style={{
+        flex: 1, minWidth: 0,
+        padding: isMobile ? '16px 12px 90px' : '24px 28px',
+        overflowY: 'auto', overflowX: 'hidden',
+        background: '#f8fafc',
+      }}>
+        <UndoBar />
         {children}
       </main>
-      <MobileBottomNav pathname={pathname} />
+      {isMobile && <MobileBottomNav pathname={pathname} />}
     </div>
   );
 }

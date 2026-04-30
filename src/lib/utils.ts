@@ -1,5 +1,16 @@
 import { HomeworkDay } from './types';
 
+export function localDateStr(d: Date = new Date()): string {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+export function localTimeStr(d: Date = new Date()): string {
+  return d.toTimeString().slice(0, 5);
+}
+
 export function getWeekKey(date: Date = new Date()): string {
   const d = new Date(date);
   d.setHours(0, 0, 0, 0);

@@ -5,6 +5,7 @@ import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { TestRecord } from '@/lib/types';
 import { Camera, Upload, CheckCircle, Clock, ImageIcon, X, Loader2, ClipboardCheck, AlertCircle } from 'lucide-react';
+import { localDateStr, getWeekKey, DAY_LABELS, DAY_ORDER } from '@/lib/utils';
 
 type SubmitStep = 'form' | 'photo' | 'extracting' | 'confirm' | 'done';
 
@@ -14,14 +15,15 @@ export default function StudentTestPage() {
   const { state, dispatch } = useStore();
 
   const student = state.students.find(s => s.id === id);
-  const week = `${new Date().getFullYear()}-W${Math.ceil(new Date().getDate() / 7).toString().padStart(2, '0')}`;
+  const week = getWeekKey();
   const myTests = state.testRecords.filter(t => t.studentId === id);
   const latestTest = myTests[myTests.length - 1];
 
   const [step, setStep] = useState<SubmitStep>('form');
   const [subject, setSubject] = useState('영어 어휘 테스트');
-  const [maxScore, setMaxScore] = useState('100');
+  const MAX_SCORE = 20;
   const [score, setScore] = useState('');
+  const [selectedDay, setSelectedDay] = useState<string>(DAY_ORDER[new Date().getDay() - 1] || 'mon');
   const [extractedScore, setExtractedScore] = useState<number | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [inputMethod, setInputMethod] = useState<'direct' | 'photo'>('direct');
@@ -51,12 +53,13 @@ export default function StudentTestPage() {
       studentName: student?.name || '',
       subject,
       score: finalScore,
-      maxScore: Number(maxScore),
+      maxScore: MAX_SCORE,
       imageUrl: imagePreview || undefined,
       submittedByStudent: true,
       status: 'pending',
       week,
-      date: new Date().toISOString().slice(0, 10),
+      date: localDateStr(),
+      day: selectedDay,
     };
     dispatch({ type: 'ADD_TEST', payload: record });
     setStep('done');
@@ -68,6 +71,7 @@ export default function StudentTestPage() {
     setExtractedScore(null);
     setImagePreview(null);
     setInputMethod('direct');
+    setSelectedDay(DAY_ORDER[new Date().getDay() - 1] || 'mon');
   };
 
   const gradeColor = (pct: number) => pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
@@ -89,9 +93,9 @@ export default function StudentTestPage() {
           <div style={{ display: 'flex', alignItems: 'center', gap: 16, background: '#f8fafc', borderRadius: 12, padding: '12px 16px' }}>
             <div style={{ textAlign: 'center' }}>
               <div style={{ fontSize: 36, fontWeight: 900, color: latestTest.score !== null ? gradeColor((latestTest.score / latestTest.maxScore) * 100) : '#94a3b8' }}>
-                {latestTest.score !== null ? latestTest.score : '-'}
+                {latestTest.score !== null ? `${latestTest.score}개` : '-'}
               </div>
-              <div style={{ fontSize: 12, color: '#94a3b8' }}>/ {latestTest.maxScore}점</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>/ {latestTest.maxScore}개 맞음</div>
             </div>
             {latestTest.score !== null && (
               <div style={{ flex: 1 }}>
@@ -122,6 +126,28 @@ export default function StudentTestPage() {
         {/* STEP: form */}
         {step === 'form' && (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>시험 요일</label>
+              <div style={{ display: 'flex', gap: 6 }}>
+                {DAY_ORDER.map(day => (
+                  <button
+                    key={day}
+                    type="button"
+                    onClick={() => setSelectedDay(day)}
+                    style={{
+                      flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid',
+                      borderColor: selectedDay === day ? '#6366f1' : '#e2e8f0',
+                      background: selectedDay === day ? '#eff0ff' : 'white',
+                      color: selectedDay === day ? '#6366f1' : '#94a3b8',
+                      fontWeight: selectedDay === day ? 700 : 400, fontSize: 15, cursor: 'pointer',
+                      minHeight: 'unset',
+                    }}
+                  >
+                    {DAY_LABELS[day]}
+                  </button>
+                ))}
+              </div>
+            </div>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>시험 과목</label>
               <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="시험명 입력" style={{ borderRadius: 10 }} />
@@ -156,24 +182,20 @@ export default function StudentTestPage() {
 
             {inputMethod === 'direct' && (
               <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>점수 입력 (만점: {maxScore}점)</label>
-                <div style={{ display: 'flex', gap: 10 }}>
+                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>맞힌 개수 입력 (20개 만점)</label>
+                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
                   <input
                     type="number" value={score} onChange={e => setScore(e.target.value)}
-                    placeholder="내 점수"
+                    placeholder="맞힌 개수"
                     style={{ fontSize: 28, fontWeight: 800, textAlign: 'center', flex: 1, borderRadius: 12 }}
-                    min="0" max={maxScore}
+                    min="0" max="20"
                   />
-                  <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', color: '#94a3b8', fontSize: 20 }}>/</div>
-                  <input
-                    type="number" value={maxScore} onChange={e => setMaxScore(e.target.value)}
-                    style={{ fontSize: 18, fontWeight: 600, textAlign: 'center', width: 80, borderRadius: 12 }}
-                  />
+                  <div style={{ color: '#94a3b8', fontSize: 18, whiteSpace: 'nowrap' }}>/ 20개</div>
                 </div>
                 {score && (
                   <div style={{ marginTop: 10, textAlign: 'center', padding: '10px', background: '#f8fafc', borderRadius: 10 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: gradeColor((Number(score) / Number(maxScore)) * 100) }}>
-                      {Math.round((Number(score) / Number(maxScore)) * 100)}% · 등급 {gradeLabel((Number(score) / Number(maxScore)) * 100)}
+                    <span style={{ fontSize: 15, fontWeight: 700, color: gradeColor((Number(score) / MAX_SCORE) * 100) }}>
+                      {Math.round((Number(score) / MAX_SCORE) * 100)}% · 등급 {gradeLabel((Number(score) / MAX_SCORE) * 100)}
                     </span>
                   </div>
                 )}
@@ -259,10 +281,10 @@ export default function StudentTestPage() {
 
             <div style={{ background: '#f0fdf4', borderRadius: 12, padding: 16, marginBottom: 16, textAlign: 'center' }}>
               <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>인식된 점수</div>
-              <div style={{ fontSize: 48, fontWeight: 900, color: gradeColor((extractedScore! / Number(maxScore)) * 100), lineHeight: 1 }}>
+              <div style={{ fontSize: 48, fontWeight: 900, color: gradeColor((extractedScore! / MAX_SCORE) * 100), lineHeight: 1 }}>
                 {extractedScore}
               </div>
-              <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 4 }}>/ {maxScore}점</div>
+              <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 4 }}>/ {MAX_SCORE}개</div>
             </div>
 
             <div style={{ background: '#fffbeb', borderRadius: 10, padding: 12, marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>
@@ -321,7 +343,7 @@ export default function StudentTestPage() {
                 <div style={{ textAlign: 'right', display: 'flex', alignItems: 'center', gap: 10 }}>
                   {t.score !== null ? (
                     <div>
-                      <div style={{ fontSize: 20, fontWeight: 800, color: gradeColor((t.score / t.maxScore) * 100) }}>{t.score}점</div>
+                      <div style={{ fontSize: 20, fontWeight: 800, color: gradeColor((t.score / t.maxScore) * 100) }}>{t.score}개</div>
                       <div style={{ fontSize: 11, color: '#94a3b8' }}>{Math.round((t.score / t.maxScore) * 100)}%</div>
                     </div>
                   ) : (

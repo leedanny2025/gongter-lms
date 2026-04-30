@@ -1,57 +1,29 @@
 'use client';
 
-import { useState } from 'react';
 import { useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
-import { AttendanceRecord } from '@/lib/types';
-import { QrCode, CheckCircle, Clock, MapPin, Calendar, ChevronRight, AlertCircle } from 'lucide-react';
+import { QrCode, CheckCircle, Clock, AlertCircle, ExternalLink } from 'lucide-react';
+
+const ATTENDANCE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1gvAaaBfba-o2zPv9TM39xTKzmpaldsv2D-bIz7WAdms/edit?usp=sharing';
 
 export default function StudentAttendancePage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
-  const { state, dispatch } = useStore();
+  const { state } = useStore();
 
-  const student = state.students.find(s => s.id === id);
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const _now = new Date();
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const todayStr = `${_now.getFullYear()}-${pad(_now.getMonth()+1)}-${pad(_now.getDate())}`;
   const todayRecord = state.attendanceRecords.find(a => a.studentId === id && a.date === todayStr);
   const myAttendance = state.attendanceRecords.filter(a => a.studentId === id);
-
-  const [step, setStep] = useState<'main' | 'scanning' | 'name' | 'done'>(todayRecord ? 'done' : 'main');
-  const [name, setName] = useState(student?.name || '');
-  const [checkedTime, setCheckedTime] = useState('');
-
-  const startScan = () => {
-    setStep('scanning');
-    // QR 스캔 시뮬레이션 (실제 구현: jsQR 또는 html5-qrcode 라이브러리 사용)
-    setTimeout(() => setStep('name'), 1800);
-  };
-
-  const checkIn = () => {
-    if (!name.trim()) return alert('이름을 입력해주세요');
-    const now = new Date();
-    const timeStr = now.toTimeString().slice(0, 5);
-    const classStart = '14:00';
-    const isLate = timeStr > classStart;
-
-    const record: AttendanceRecord = {
-      id: `a${Date.now()}`,
-      studentId: id,
-      studentName: name,
-      classGroup: student?.classGroup || '',
-      date: todayStr,
-      checkInTime: timeStr,
-      status: isLate ? 'late' : 'present',
-    };
-    dispatch({ type: 'ADD_ATTENDANCE', payload: record });
-    setCheckedTime(timeStr);
-    setStep('done');
-  };
 
   // 이번 주 출석 통계
   const thisWeekDates = Array.from({ length: 7 }, (_, i) => {
     const d = new Date();
     d.setDate(d.getDate() - d.getDay() + i);
-    return d.toISOString().slice(0, 10);
+    return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   });
 
   const weeklyAttendance = thisWeekDates.map(date => ({
@@ -74,133 +46,13 @@ export default function StudentAttendancePage() {
           <div style={{ background: '#dcfce7', borderRadius: 10, padding: 8 }}>
             <QrCode size={20} color="#22c55e" />
           </div>
-          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>출석 체크</h2>
+          <h2 style={{ margin: 0, fontSize: 17, fontWeight: 700 }}>오늘 출석</h2>
         </div>
 
-        {/* STEP: main */}
-        {step === 'main' && (
-          <div>
-            <div style={{ background: '#f8fafc', borderRadius: 14, padding: 20, textAlign: 'center', marginBottom: 20 }}>
-              <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>
-                {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}
-              </div>
-              <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a' }}>
-                {new Date().toTimeString().slice(0, 5)}
-              </div>
-              <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>수업 시간: 14:00</div>
-            </div>
-
-            <div style={{ background: '#fffbeb', borderRadius: 12, padding: 14, marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-              <AlertCircle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} />
-              <div style={{ fontSize: 13, color: '#92400e' }}>
-                교실에 있는 QR 코드를 스캔하거나 아래 버튼을 눌러 출석 체크를 해주세요.
-              </div>
-            </div>
-
-            <button
-              onClick={startScan}
-              style={{
-                width: '100%', padding: '18px', borderRadius: 14, border: 'none',
-                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                color: 'white', fontWeight: 800, fontSize: 17, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
-                boxShadow: '0 6px 20px rgba(34,197,94,0.35)',
-              }}
-            >
-              <QrCode size={24} /> QR 코드 스캔하기
-            </button>
-          </div>
-        )}
-
-        {/* STEP: scanning (QR 인식 중) */}
-        {step === 'scanning' && (
-          <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ width: 200, height: 200, margin: '0 auto 20px', position: 'relative', background: '#0f172a', borderRadius: 16, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {/* QR 스캐너 시뮬레이션 UI */}
-              <div style={{ position: 'absolute', inset: 0, background: 'rgba(34,197,94,0.05)' }} />
-              <div style={{ position: 'absolute', top: 20, left: 20, width: 30, height: 30, borderTop: '3px solid #22c55e', borderLeft: '3px solid #22c55e', borderRadius: '4px 0 0 0' }} />
-              <div style={{ position: 'absolute', top: 20, right: 20, width: 30, height: 30, borderTop: '3px solid #22c55e', borderRight: '3px solid #22c55e', borderRadius: '0 4px 0 0' }} />
-              <div style={{ position: 'absolute', bottom: 20, left: 20, width: 30, height: 30, borderBottom: '3px solid #22c55e', borderLeft: '3px solid #22c55e', borderRadius: '0 0 0 4px' }} />
-              <div style={{ position: 'absolute', bottom: 20, right: 20, width: 30, height: 30, borderBottom: '3px solid #22c55e', borderRight: '3px solid #22c55e', borderRadius: '0 0 4px 0' }} />
-              {/* 스캔 라인 애니메이션 */}
-              <div style={{
-                position: 'absolute', left: 20, right: 20, height: 2,
-                background: 'linear-gradient(90deg, transparent, #22c55e, transparent)',
-                animation: 'scanLine 1.5s ease-in-out infinite',
-              }} />
-              <QrCode size={60} color="rgba(255,255,255,0.3)" />
-            </div>
-            <div style={{ fontWeight: 700, fontSize: 16, marginBottom: 6 }}>QR 코드 인식 중...</div>
-            <div style={{ fontSize: 13, color: '#64748b' }}>카메라를 QR 코드에 가까이 대세요</div>
-            <style>{`
-              @keyframes scanLine {
-                0% { top: 40px; }
-                50% { top: 160px; }
-                100% { top: 40px; }
-              }
-            `}</style>
-          </div>
-        )}
-
-        {/* STEP: name 입력 */}
-        {step === 'name' && (
-          <div>
-            <div style={{ background: '#d1fae5', borderRadius: 12, padding: 14, marginBottom: 20, display: 'flex', gap: 10, alignItems: 'center' }}>
-              <CheckCircle size={20} color="#16a34a" />
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 14, color: '#15803d' }}>QR 코드 인식 완료!</div>
-                <div style={{ fontSize: 12, color: '#166534' }}>이름을 확인하고 출석 체크를 완료해주세요.</div>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: 16 }}>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>본인 이름 확인</label>
-              <input
-                value={name}
-                onChange={e => setName(e.target.value)}
-                placeholder="이름 입력"
-                style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', borderRadius: 12, padding: '14px' }}
-                autoFocus
-              />
-            </div>
-
-            <div style={{ background: '#f8fafc', borderRadius: 10, padding: 14, marginBottom: 16, display: 'flex', gap: 12, alignItems: 'center' }}>
-              <Clock size={16} color="#64748b" />
-              <div>
-                <div style={{ fontSize: 12, color: '#94a3b8' }}>현재 시간</div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>{new Date().toTimeString().slice(0, 5)}</div>
-              </div>
-              <div style={{ borderLeft: '1px solid #e2e8f0', paddingLeft: 12 }}>
-                <div style={{ fontSize: 12, color: '#94a3b8' }}>수업 시작</div>
-                <div style={{ fontWeight: 700, fontSize: 16 }}>14:00</div>
-              </div>
-              {new Date().toTimeString().slice(0, 5) > '14:00' && (
-                <span style={{ marginLeft: 'auto', background: '#fef3c7', color: '#92400e', fontSize: 12, padding: '4px 10px', borderRadius: 20, fontWeight: 600 }}>
-                  지각
-                </span>
-              )}
-            </div>
-
-            <button
-              onClick={checkIn}
-              style={{
-                width: '100%', padding: '16px', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
-                color: 'white', fontWeight: 800, fontSize: 16, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}
-            >
-              <CheckCircle size={20} /> 출석 완료!
-            </button>
-          </div>
-        )}
-
-        {/* STEP: done */}
-        {step === 'done' && (
+        {todayRecord ? (
           <div style={{ textAlign: 'center', padding: '10px 0' }}>
             {(() => {
-              const record = todayRecord || state.attendanceRecords.find(a => a.studentId === id && a.date === todayStr);
-              const isLate = record?.status === 'late';
+              const isLate = todayRecord.status === 'late';
               return (
                 <>
                   <div style={{ width: 80, height: 80, borderRadius: '50%', background: isLate ? '#fef3c7' : '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
@@ -210,7 +62,7 @@ export default function StudentAttendancePage() {
                     {isLate ? '지각 처리되었어요' : '출석 완료!'}
                   </div>
                   <div style={{ fontSize: 15, color: '#64748b', marginBottom: 4 }}>
-                    입실 시간: <strong>{record?.checkInTime || checkedTime}</strong>
+                    입실 시간: <strong>{todayRecord.checkInTime}</strong>
                   </div>
                   <div style={{ fontSize: 13, color: '#94a3b8' }}>
                     {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}
@@ -223,6 +75,37 @@ export default function StudentAttendancePage() {
                 </>
               );
             })()}
+          </div>
+        ) : (
+          <div>
+            <div style={{ background: '#f8fafc', borderRadius: 14, padding: 20, textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ fontSize: 15, fontWeight: 600, color: '#374151', marginBottom: 4 }}>
+                {new Date().toLocaleDateString('ko-KR', { month: 'long', day: 'numeric', weekday: 'long' })}
+              </div>
+              <div style={{ fontSize: 28, fontWeight: 800, color: '#0f172a' }}>
+                {new Date().toTimeString().slice(0, 5)}
+              </div>
+            </div>
+
+            <div style={{ background: '#fffbeb', borderRadius: 12, padding: 14, marginBottom: 20, display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <AlertCircle size={18} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} />
+              <div style={{ fontSize: 13, color: '#92400e' }}>
+                교실 입구에 있는 QR 코드를 스캔해서 출석 체크를 해주세요.
+              </div>
+            </div>
+
+            <button
+              onClick={() => router.push('/checkin')}
+              style={{
+                width: '100%', padding: '18px', borderRadius: 14, border: 'none',
+                background: 'linear-gradient(135deg, #22c55e, #16a34a)',
+                color: 'white', fontWeight: 800, fontSize: 17, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10,
+                boxShadow: '0 6px 20px rgba(34,197,94,0.35)',
+              }}
+            >
+              <QrCode size={24} /> 출석 체크하기
+            </button>
           </div>
         )}
       </div>
@@ -279,6 +162,28 @@ export default function StudentAttendancePage() {
           ))}
         </div>
       </div>
+
+      {/* 구글 시트 링크 */}
+      <a
+        href={ATTENDANCE_SHEET_URL}
+        target="_blank"
+        rel="noopener noreferrer"
+        style={{
+          display: 'flex', alignItems: 'center', gap: 14,
+          background: 'white', borderRadius: 20, padding: '18px 20px',
+          boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
+          border: '1.5px solid #bbf7d0', textDecoration: 'none',
+        }}
+      >
+        <div style={{ width: 44, height: 44, borderRadius: 12, background: '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0, fontSize: 22 }}>
+          📊
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ fontSize: 15, fontWeight: 800, color: '#15803d' }}>구글 시트로 출석 확인</div>
+          <div style={{ fontSize: 12, color: '#64748b', marginTop: 2 }}>전체 출석 기록을 구글 시트에서 확인하고 입력할 수 있어요</div>
+        </div>
+        <ExternalLink size={18} color="#22c55e" />
+      </a>
     </div>
   );
 }

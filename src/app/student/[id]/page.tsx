@@ -3,7 +3,7 @@
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
-import { getWeekKey } from '@/lib/utils';
+import { getWeekKey, localDateStr } from '@/lib/utils';
 import { BookOpen, ClipboardCheck, Calendar, CheckCircle, XCircle, Clock, TrendingUp, Award } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -15,7 +15,7 @@ export default function StudentDashboard() {
   if (!student) return <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>학생을 찾을 수 없습니다</div>;
 
   const week = getWeekKey();
-  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayStr = localDateStr();
 
   const weekHomework = state.dayHomeworks.filter(h => h.studentId === id && h.week === week);
   const weekTests = state.testRecords.filter(t => t.studentId === id && t.week === week);

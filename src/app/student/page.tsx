@@ -20,7 +20,7 @@ export default function StudentLoginPage() {
 
   const filtered = query.trim()
     ? state.students.filter(s => s.name.includes(query.trim()))
-    : state.students;
+    : [];
 
   const selectStudent = (s: typeof state.students[0]) => {
     setSelected(s);
@@ -78,7 +78,7 @@ export default function StudentLoginPage() {
         {step === 'search' && (
           <div style={{ padding: '24px 20px' }}>
             <h2 style={{ margin: '0 0 6px', fontSize: 19, fontWeight: 800 }}>내 이름을 찾으세요</h2>
-            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#64748b' }}>이름을 검색하거나 아래 목록에서 선택하세요</p>
+            <p style={{ margin: '0 0 18px', fontSize: 13, color: '#64748b' }}>이름을 입력하여 검색하세요</p>
 
             <div style={{ position: 'relative', marginBottom: 14 }}>
               <Search size={16} color="#94a3b8" style={{ position: 'absolute', left: 13, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }} />
@@ -122,7 +122,7 @@ export default function StudentLoginPage() {
                   </div>
                 </button>
               ))}
-              {filtered.length === 0 && (
+              {filtered.length === 0 && query.trim() && (
                 <div style={{ textAlign: 'center', padding: '30px 0', color: '#94a3b8', fontSize: 14 }}>
                   "{query}" 검색 결과 없음
                 </div>

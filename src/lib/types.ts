@@ -2,11 +2,16 @@ export interface Student {
   id: string;
   name: string;
   grade: string;
-  classGroup: string; // 반 (예: A반, B반)
+  classGroup: string;
   parentPhone: string;
   dollars: number;
   joinedAt: string;
-  pin: string; // 학생 비밀번호 (기본값 '1111')
+  pin: string;
+  level?: string;
+  progress?: string;
+  scheduleDays?: string[];
+  scheduleTimes?: Record<string, string>;
+  scheduleTime?: string;
 }
 
 export interface DollarCondition {
@@ -20,6 +25,8 @@ export interface DollarCondition {
 
 export type HomeworkDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri';
 
+export type HomeworkStatus = 'pending' | 'agreed' | 'submitted' | 'confirmed' | 'approved' | 'rejected' | 'missed';
+
 export interface DayHomework {
   id: string;
   studentId: string;
@@ -31,8 +38,11 @@ export interface DayHomework {
   vocabulary: string;
   other: string;
   submittedAt: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: HomeworkStatus;
+  agreedAt?: string;
+  completedAt?: string;
   approvedAt?: string;
+  note?: string;
 }
 
 export interface TestRecord {
@@ -48,6 +58,20 @@ export interface TestRecord {
   confirmedAt?: string;
   week: string;
   date: string;
+  day?: string;
+}
+
+export interface MakeupRequest {
+  id: string;
+  studentId: string;
+  studentName: string;
+  week: string;
+  requestedAt: string;
+  makeupDate: string;
+  makeupTime: string;
+  reason?: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedAt?: string;
 }
 
 export interface AttendanceRecord {
@@ -57,6 +81,7 @@ export interface AttendanceRecord {
   classGroup: string;
   date: string;
   checkInTime: string;
+  checkOutTime?: string;
   status: 'present' | 'late' | 'absent';
 }
 
@@ -78,12 +103,51 @@ export interface WeeklyReport {
   }[];
 }
 
+export interface AttitudeRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  week: string;
+  date: string;
+  shadowing: number;
+  learningAttitude: number;
+  basicAttitude: number;
+}
+
+export interface AttitudeDollarTier {
+  minScore: number;
+  dollars: number;
+}
+
+export interface AttitudeDollarSettings {
+  tier1: AttitudeDollarTier;
+  tier2: AttitudeDollarTier;
+  tier3: AttitudeDollarTier;
+  locked: boolean;
+}
+
 export interface AppData {
   students: Student[];
   dollarConditions: DollarCondition[];
   dayHomeworks: DayHomework[];
   testRecords: TestRecord[];
   attendanceRecords: AttendanceRecord[];
+  attitudeRecords: AttitudeRecord[];
+  makeupRequests: MakeupRequest[];
+  attitudeDollarSettings: AttitudeDollarSettings;
   weeklyReports: WeeklyReport[];
+  reports: StudentReport[];
   currentWeek: string;
+}
+
+export interface StudentReport {
+  id: string;
+  studentId: string;
+  studentName: string;
+  type: 'weekly' | 'monthly';
+  period: string;
+  teacherNotes: string;
+  teacherRequests: string;
+  createdAt: string;
+  updatedAt: string;
 }

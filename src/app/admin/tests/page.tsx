@@ -3,17 +3,19 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { TestRecord } from '@/lib/types';
+import { Student } from '@/lib/types';
 import { Plus, CheckCircle, ImageIcon, X, Upload } from 'lucide-react';
+import { localDateStr, getWeekKey } from '@/lib/utils';
 
 function AddTestModal({ onSave, onClose }: { onSave: (t: TestRecord) => void; onClose: () => void }) {
   const { state } = useStore();
   const [studentId, setStudentId] = useState('');
   const [subject, setSubject] = useState('영어 어휘 테스트');
   const [score, setScore] = useState('');
-  const [maxScore, setMaxScore] = useState('100');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
+  const [maxScore, setMaxScore] = useState('20');
+  const [date, setDate] = useState(localDateStr());
 
-  const week = `${new Date().getFullYear()}-W${Math.ceil(new Date().getDate() / 7).toString().padStart(2, '0')}`;
+  const week = getWeekKey();
 
   const save = () => {
     const student = state.students.find(s => s.id === studentId);
@@ -55,11 +57,11 @@ function AddTestModal({ onSave, onClose }: { onSave: (t: TestRecord) => void; on
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
               <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>점수</label>
-              <input type="number" value={score} onChange={e => setScore(e.target.value)} placeholder="0" min="0" max="100" />
+              <input type="number" value={score} onChange={e => setScore(e.target.value)} placeholder="0" min="0" max={maxScore} />
             </div>
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>만점</label>
-              <input type="number" value={maxScore} onChange={e => setMaxScore(e.target.value)} placeholder="100" />
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>만점 (개)</label>
+              <input type="number" value={maxScore} onChange={e => setMaxScore(e.target.value)} placeholder="20" />
             </div>
           </div>
           <div>
@@ -104,8 +106,8 @@ function ScoreConfirmModal({ record, onConfirm, onClose }: { record: TestRecord;
           )}
         </div>
         <div>
-          <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>최종 점수 (만점 {record.maxScore}점)</label>
-          <input type="number" value={score} onChange={e => setScore(e.target.value)} placeholder="점수 입력" min="0" max={record.maxScore} style={{ fontSize: 24, fontWeight: 700, textAlign: 'center' }} />
+          <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>맞은 개수 ({record.maxScore}개 중)</label>
+          <input type="number" value={score} onChange={e => setScore(e.target.value)} placeholder="개수 입력" min="0" max={record.maxScore} style={{ fontSize: 24, fontWeight: 700, textAlign: 'center' }} />
         </div>
         {record.imageUrl && (
           <div style={{ marginTop: 16, background: '#f8fafc', borderRadius: 8, padding: 16, textAlign: 'center', color: '#94a3b8' }}>
@@ -127,13 +129,93 @@ function ScoreConfirmModal({ record, onConfirm, onClose }: { record: TestRecord;
   );
 }
 
+function StudentScoreModal({ student, records, onClose }: { student: Student; records: TestRecord[]; onClose: () => void }) {
+  const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
+  const confirmed = sorted.filter(r => r.status === 'confirmed' && r.score !== null);
+  const avg = confirmed.length > 0
+    ? Math.round(confirmed.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / confirmed.length)
+    : null;
+
+  const scoreColor = (score: number, max: number) => {
+    const pct = (score / max) * 100;
+    return pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
+  };
+
+  const fmtDate = (d: string) => {
+    const [, m, day] = d.split('-');
+    return `${Number(m)}/${Number(day)}`;
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal" style={{ maxWidth: 420 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{student.name} 점수 누적</h3>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{student.classGroup} · 총 {sorted.length}회</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={22} /></button>
+        </div>
+
+        {avg !== null && (
+          <div style={{ background: '#f0f9ff', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#0369a1' }}>전체 평균</span>
+            <span style={{ fontSize: 24, fontWeight: 900, color: scoreColor(avg, 100) }}>{avg}%</span>
+          </div>
+        )}
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto' }}>
+          {sorted.length === 0 && (
+            <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8' }}>시험 기록이 없습니다</div>
+          )}
+          {sorted.map(t => (
+            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
+              <div style={{ fontSize: 15, fontWeight: 800, color: '#475569', minWidth: 36 }}>{fmtDate(t.date)}</div>
+              <div style={{ flex: 1 }}>
+                <div style={{ fontSize: 13, fontWeight: 600 }}>{t.subject}</div>
+                {t.status !== 'confirmed' && (
+                  <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>대기중</span>
+                )}
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                {t.score !== null ? (
+                  <>
+                    <span style={{ fontSize: 18, fontWeight: 800, color: scoreColor(t.score, t.maxScore) }}>{t.score}</span>
+                    <span style={{ fontSize: 12, color: '#94a3b8' }}>/{t.maxScore}</span>
+                    <div style={{ fontSize: 11, color: scoreColor(t.score, t.maxScore), fontWeight: 600 }}>
+                      {Math.round((t.score / t.maxScore) * 100)}%
+                    </div>
+                  </>
+                ) : (
+                  <span style={{ fontSize: 13, color: '#94a3b8' }}>미입력</span>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <button className="btn btn-outline" style={{ width: '100%', marginTop: 16 }} onClick={onClose}>닫기</button>
+      </div>
+    </div>
+  );
+}
+
 export default function TestsPage() {
   const { state, dispatch } = useStore();
   const [showAdd, setShowAdd] = useState(false);
   const [confirmRecord, setConfirmRecord] = useState<TestRecord | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
+  const [summaryView, setSummaryView] = useState<'week' | 'all'>('week');
+  const [detailStudent, setDetailStudent] = useState<Student | null>(null);
+  const [classFilter, setClassFilter] = useState('전체');
 
-  const records = state.testRecords.filter(t => filter === 'all' || t.status === filter);
+  const currentWeek = getWeekKey();
+  const classGroups = ['전체', ...new Set(state.students.map(s => s.classGroup))];
+
+  const weekRecords = state.testRecords.filter(t => t.week === currentWeek &&
+    (classFilter === '전체' || state.students.find(s => s.id === t.studentId)?.classGroup === classFilter));
+  const records = weekRecords.filter(t => filter === 'all' || t.status === filter);
+  const filteredStudents = classFilter === '전체' ? state.students : state.students.filter(s => s.classGroup === classFilter);
 
   const addTest = (t: TestRecord) => {
     dispatch({ type: 'ADD_TEST', payload: t });
@@ -165,11 +247,25 @@ export default function TestsPage() {
         </button>
       </div>
 
+      {classGroups.length > 2 && (
+        <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap' }}>
+          {classGroups.map(cls => (
+            <button key={cls} onClick={() => setClassFilter(cls)} style={{
+              padding: '5px 12px', borderRadius: 20, border: '1px solid',
+              borderColor: classFilter === cls ? '#3b82f6' : '#e2e8f0',
+              background: classFilter === cls ? '#eff6ff' : 'white',
+              color: classFilter === cls ? '#3b82f6' : '#64748b',
+              fontWeight: classFilter === cls ? 700 : 400, fontSize: 12, cursor: 'pointer',
+            }}>{cls}</button>
+          ))}
+        </div>
+      )}
+
       <div style={{ display: 'flex', gap: 8, marginBottom: 20 }}>
         {([
-          { key: 'all', label: `전체 (${state.testRecords.length})` },
-          { key: 'pending', label: `대기중 (${state.testRecords.filter(t => t.status === 'pending').length})` },
-          { key: 'confirmed', label: `확정됨 (${state.testRecords.filter(t => t.status === 'confirmed').length})` },
+          { key: 'all', label: `이번 주 전체 (${weekRecords.length})` },
+          { key: 'pending', label: `대기중 (${weekRecords.filter(t => t.status === 'pending').length})` },
+          { key: 'confirmed', label: `확정됨 (${weekRecords.filter(t => t.status === 'confirmed').length})` },
         ] as const).map(({ key, label }) => (
           <button key={key} onClick={() => setFilter(key)} style={{
             padding: '7px 16px', borderRadius: 20, border: '1px solid',
@@ -239,29 +335,67 @@ export default function TestsPage() {
       </div>
 
       {/* 학생별 점수 요약 */}
-      <div style={{ marginTop: 20, display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-        {state.students.map(student => {
-          const confirmed = state.testRecords.filter(t => t.studentId === student.id && t.status === 'confirmed' && t.score !== null);
-          const avg = confirmed.length > 0
-            ? Math.round(confirmed.reduce((s, t) => s + ((t.score! / t.maxScore) * 100), 0) / confirmed.length)
-            : null;
-          return (
-            <div key={student.id} className="card" style={{ textAlign: 'center', padding: 16 }}>
-              <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#1e40af', margin: '0 auto 8px' }}>
-                {student.name[0]}
+      <div style={{ marginTop: 28 }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+          <h2 style={{ fontSize: 16, fontWeight: 700, margin: 0 }}>학생별 점수 현황</h2>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {([{ key: 'week', label: '주간 누적' }, { key: 'all', label: '전체 누적' }] as const).map(({ key, label }) => (
+              <button key={key} onClick={() => setSummaryView(key)} style={{
+                padding: '7px 16px', borderRadius: 20, border: '1px solid',
+                borderColor: summaryView === key ? '#6366f1' : '#e2e8f0',
+                background: summaryView === key ? '#eff0ff' : 'white',
+                color: summaryView === key ? '#6366f1' : '#64748b',
+                fontWeight: summaryView === key ? 700 : 400,
+                cursor: 'pointer', fontSize: 13,
+              }}>{label}</button>
+            ))}
+          </div>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(130px, 1fr))', gap: 12 }}>
+          {filteredStudents.map(student => {
+            const allConfirmed = state.testRecords.filter(t => t.studentId === student.id && t.status === 'confirmed' && t.score !== null);
+            const confirmed = summaryView === 'week'
+              ? allConfirmed.filter(t => t.week === currentWeek)
+              : allConfirmed;
+            const avg = confirmed.length > 0
+              ? Math.round(confirmed.reduce((s, t) => s + ((t.score! / t.maxScore) * 100), 0) / confirmed.length)
+              : null;
+            const allAvg = allConfirmed.length > 0
+              ? Math.round(allConfirmed.reduce((s, t) => s + ((t.score! / t.maxScore) * 100), 0) / allConfirmed.length)
+              : null;
+            return (
+              <div key={student.id} className="card" onClick={() => setDetailStudent(student)}
+                style={{ textAlign: 'center', padding: 16, cursor: 'pointer', transition: 'box-shadow 0.15s' }}
+                onMouseEnter={e => (e.currentTarget.style.boxShadow = '0 4px 16px rgba(99,102,241,0.15)')}
+                onMouseLeave={e => (e.currentTarget.style.boxShadow = '')}>
+                <div style={{ width: 40, height: 40, borderRadius: '50%', background: '#dbeafe', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 700, color: '#1e40af', margin: '0 auto 8px' }}>
+                  {student.name[0]}
+                </div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: '#6366f1', textDecoration: 'underline', textUnderlineOffset: 3 }}>{student.name}</div>
+                <div style={{ fontSize: 24, fontWeight: 800, marginTop: 8, color: avg !== null ? getScoreColor(avg, 100) : '#94a3b8' }}>
+                  {avg !== null ? `${avg}%` : '-'}
+                </div>
+                <div style={{ fontSize: 11, color: '#94a3b8' }}>{summaryView === 'week' ? '이번 주' : '전체'} {confirmed.length}회</div>
+                {summaryView === 'week' && allConfirmed.length > confirmed.length && (
+                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 4 }}>
+                    전체 평균 {allAvg !== null ? `${allAvg}%` : '-'} ({allConfirmed.length}회)
+                  </div>
+                )}
               </div>
-              <div style={{ fontWeight: 600, fontSize: 14 }}>{student.name}</div>
-              <div style={{ fontSize: 22, fontWeight: 700, marginTop: 8, color: avg !== null ? getScoreColor(avg, 100) : '#94a3b8' }}>
-                {avg !== null ? `${avg}%` : '-'}
-              </div>
-              <div style={{ fontSize: 11, color: '#94a3b8' }}>평균 ({confirmed.length}회)</div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
       {showAdd && <AddTestModal onSave={addTest} onClose={() => setShowAdd(false)} />}
       {confirmRecord && <ScoreConfirmModal record={confirmRecord} onConfirm={confirmTest} onClose={() => setConfirmRecord(null)} />}
+      {detailStudent && (
+        <StudentScoreModal
+          student={detailStudent}
+          records={state.testRecords.filter(t => t.studentId === detailStudent.id)}
+          onClose={() => setDetailStudent(null)}
+        />
+      )}
     </div>
   );
 }

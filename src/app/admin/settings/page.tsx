@@ -3,7 +3,26 @@
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { DollarCondition } from '@/lib/types';
-import { Plus, Edit2, Trash2, Save, X, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Plus, Edit2, Trash2, Save, X, ToggleLeft, ToggleRight, Download, RefreshCw } from 'lucide-react';
+import { getNextWeek, getWeekDateRange } from '@/lib/utils';
+
+function downloadCSV(filename: string, rows: Record<string, unknown>[]) {
+  if (!rows.length) return alert('데이터가 없습니다');
+  const headers = Object.keys(rows[0]);
+  const lines = [
+    headers.join(','),
+    ...rows.map(r => headers.map(h => {
+      const v = r[h];
+      const s = v === null || v === undefined ? '' : String(v);
+      return s.includes(',') || s.includes('"') ? `"${s.replace(/"/g, '""')}"` : s;
+    }).join(',')),
+  ];
+  const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url; a.download = filename; a.click();
+  URL.revokeObjectURL(url);
+}
 
 const TYPE_LABELS = { attendance: '출석', homework: '숙제', test: '시험', attitude: '태도', custom: '기타' };
 const TYPE_COLORS = { attendance: '#22c55e', homework: '#3b82f6', test: '#f59e0b', attitude: '#8b5cf6', custom: '#64748b' };
@@ -63,6 +82,12 @@ function ConditionModal({ condition, onSave, onClose }: { condition: Partial<Dol
     </div>
   );
 }
+
+const STATUS_KO: Record<string, string> = {
+  present: '출석', late: '지각', absent: '결석',
+  pending: '대기', approved: '승인', rejected: '반려', confirmed: '확정',
+  mon: '월', tue: '화', wed: '수', thu: '목', fri: '금',
+};
 
 export default function SettingsPage() {
   const { state, dispatch } = useStore();
@@ -187,6 +212,126 @@ export default function SettingsPage() {
           <li>수동 지급/차감도 가능합니다 (달러 지급 페이지에서)</li>
         </ul>
       </div>
+
+      {/* 데이터 내보내기 */}
+      <div className="card" style={{ marginTop: 20 }}>
+        <h2 style={{ fontSize: 18, fontWeight: 700, margin: '0 0 6px' }}>데이터 내보내기</h2>
+        <p style={{ fontSize: 13, color: '#64748b', margin: '0 0 16px' }}>CSV 파일로 다운로드 → 구글 시트에서 열기</p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
+          {[
+            {
+              label: '학생 목록',
+              color: '#3b82f6',
+              fn: () => downloadCSV('학생목록.csv', state.students.map(s => ({
+                이름: s.name, 학년: s.grade, 반: s.classGroup,
+                학부모연락처: s.parentPhone, 달러: s.dollars, 등록일: s.joinedAt,
+              }))),
+            },
+            {
+              label: '출석 기록',
+              color: '#22c55e',
+              fn: () => downloadCSV('출석기록.csv', state.attendanceRecords.map(a => ({
+                학생: a.studentName, 반: a.classGroup, 날짜: a.date,
+                입실시간: a.checkInTime, 상태: STATUS_KO[a.status] || a.status,
+              }))),
+            },
+            {
+              label: '숙제 기록',
+              color: '#6366f1',
+              fn: () => downloadCSV('숙제기록.csv', state.dayHomeworks.map(h => ({
+                학생: h.studentName, 주차: h.week, 요일: STATUS_KO[h.day] || h.day,
+                컴퓨터: h.computer, 교재: h.textbook, 단어: h.vocabulary, 기타: h.other,
+                상태: STATUS_KO[h.status] || h.status, 제출시간: h.submittedAt,
+              }))),
+            },
+            {
+              label: '시험 점수',
+              color: '#f59e0b',
+              fn: () => downloadCSV('시험점수.csv', state.testRecords.map(t => ({
+                학생: t.studentName, 시험명: t.subject, 날짜: t.date,
+                점수: t.score ?? '', 만점: t.maxScore,
+                상태: STATUS_KO[t.status] || t.status,
+              }))),
+            },
+            {
+              label: '태도 점수',
+              color: '#8b5cf6',
+              fn: () => downloadCSV('태도점수.csv', (state.attitudeRecords || []).map(a => ({
+                학생: a.studentName, 날짜: a.date, 주차: a.week,
+                쉐도잉: a.shadowing, 학습태도: a.learningAttitude, 기본태도: a.basicAttitude,
+              }))),
+            },
+          ].map(({ label, color, fn }) => (
+            <button key={label} onClick={fn} style={{
+              display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 7,
+              padding: '12px 8px', borderRadius: 10, border: `1.5px solid ${color}20`,
+              background: color + '10', color, cursor: 'pointer', fontWeight: 700, fontSize: 13,
+            }}>
+              <Download size={14} /> {label}
+            </button>
+          ))}
+        </div>
+        <p style={{ fontSize: 11, color: '#94a3b8', marginTop: 12, marginBottom: 0 }}>
+          💡 다운로드된 CSV 파일을 구글 드라이브에 업로드하면 구글 시트로 자동 변환됩니다
+        </p>
+      </div>
+
+      {/* 주간 마무리 */}
+      {(() => {
+        const nextWeek = getNextWeek(state.currentWeek);
+        const { label: curLabel } = getWeekDateRange(state.currentWeek);
+        const { label: nextLabel } = getWeekDateRange(nextWeek);
+        const doReset = () => {
+          if (!confirm(
+            `⚠️ 주간 마무리\n\n현재 주: ${curLabel}\n다음 주: ${nextLabel}\n\n` +
+            `아래 데이터가 모두 삭제됩니다:\n• 숙제 기록\n• 시험 기록\n• 출석 기록\n• 태도 기록\n\n` +
+            `유지되는 데이터:\n• 학생 달러 잔액\n• 학생 정보\n\n계속하시겠습니까?`
+          )) return;
+          dispatch({ type: 'WEEK_RESET', payload: nextWeek });
+          alert(`✅ 주간 마무리 완료!\n${nextLabel}이 시작됩니다.`);
+        };
+        return (
+          <div className="card" style={{ marginTop: 20, background: '#fff1f2', border: '2px solid #fca5a5' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
+              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <RefreshCw size={20} color="white" />
+              </div>
+              <div>
+                <div style={{ fontSize: 16, fontWeight: 800, color: '#991b1b' }}>주간 마무리 / 새 주 시작</div>
+                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 2 }}>현재 주: {curLabel} → 다음 주: {nextLabel}</div>
+              </div>
+            </div>
+            <div style={{ background: 'white', borderRadius: 10, padding: '12px 14px', marginBottom: 14, fontSize: 13 }}>
+              <div style={{ fontWeight: 700, color: '#374151', marginBottom: 8 }}>리셋 시 처리 내용</div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>🗑 삭제 (주간 데이터)</div>
+                  {['숙제 기록', '시험 기록', '출석 기록', '태도 기록'].map(t => (
+                    <div key={t} style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>· {t}</div>
+                  ))}
+                </div>
+                <div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>✅ 유지 (누적 데이터)</div>
+                  {['학생 달러 잔액', '학생 정보', '달러 조건 설정'].map(t => (
+                    <div key={t} style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>· {t}</div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <button
+              onClick={doReset}
+              style={{
+                width: '100%', padding: '14px', borderRadius: 10, border: 'none',
+                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+                color: 'white', fontWeight: 800, fontSize: 15, cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
+              }}
+            >
+              <RefreshCw size={18} /> 주간 마무리 실행 → {nextLabel} 시작
+            </button>
+          </div>
+        );
+      })()}
 
       {modal !== false && (
         <ConditionModal condition={modal} onSave={save} onClose={() => setModal(false)} />
