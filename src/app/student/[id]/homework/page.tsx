@@ -301,6 +301,7 @@ export default function StudentHomeworkPage() {
       computer: get('computer'), textbook: get('textbook'),
       vocabulary: get('vocabulary'), other: get('other'),
       submittedAt: new Date().toISOString(), status: 'pending',
+      expectedSubmitDate: expectedDate || undefined,
     };
     existing ? dispatch({ type: 'UPDATE_HOMEWORK', payload: record }) : dispatch({ type: 'ADD_HOMEWORK', payload: record });
     setIsEditing(false);
@@ -437,14 +438,25 @@ export default function StudentHomeworkPage() {
             <ItemInput cat={rangeCat} setCat={c => { setRangeCat(c); setRangeSub(''); }} sub={rangeSub} setSub={setRangeSub} text={rangeText} setText={setRangeText} onAdd={addRange} />
             <ItemList items={rangeItems} onRemove={(uid) => setRangeItems(p => p.filter(i => i.uid !== uid))} onEdit={editRange} />
             {rangeItems.length > 0 && (
-              <button onClick={submitRange} style={{
-                width: '100%', marginTop: 14, padding: '13px', borderRadius: 12, border: 'none',
-                background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                color: 'white', fontWeight: 800, fontSize: 15, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 'unset', ...TOUCH,
-              }}>
-                숙제 범위 확인 요청
-              </button>
+              <>
+                <div style={{ marginTop: 14, background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', border: '1px solid #c7d2fe' }}>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: '#4338ca', marginBottom: 8 }}>📅 숙제 완료 예정일 (선택)</div>
+                  <input
+                    type="date"
+                    value={expectedDate}
+                    onChange={e => setExpectedDate(e.target.value)}
+                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #a5b4fc', fontSize: 14, background: 'white', outline: 'none', boxSizing: 'border-box' as const }}
+                  />
+                </div>
+                <button onClick={submitRange} style={{
+                  width: '100%', marginTop: 10, padding: '13px', borderRadius: 12, border: 'none',
+                  background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
+                  color: 'white', fontWeight: 800, fontSize: 15, cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 'unset', ...TOUCH,
+                }}>
+                  숙제 범위 확인 요청
+                </button>
+              </>
             )}
           </>
         ) : (
