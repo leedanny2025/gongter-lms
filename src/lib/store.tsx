@@ -344,15 +344,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setUndoStackLen(undoStackRef.current.length);
     }
 
-    // 쓰기 액션 후 5초 뒤 Firebase 상태 재확인 (grace period 만료 후)
-    const writeActions = new Set(['ADD_STUDENT','UPDATE_STUDENT','DELETE_STUDENT','ADD_HOMEWORK','UPDATE_HOMEWORK','APPROVE_HOMEWORK','REJECT_HOMEWORK','AGREE_HOMEWORK','COMPLETE_HOMEWORK','CONFIRM_HOMEWORK','ADD_TEST','UPDATE_TEST','CONFIRM_TEST','ADD_ATTENDANCE','UPDATE_ATTENDANCE','DELETE_ATTENDANCE','ADD_ATTITUDE','UPDATE_ATTITUDE','DELETE_ATTITUDE','AWARD_DOLLARS','ADD_MAKEUP','UPDATE_MAKEUP','SET_WEEK','WEEK_RESET']);
-    if (writeActions.has(action.type)) {
-      setTimeout(() => {
-        fbGet('lms').then(data => {
-          if (data && typeof data === 'object') applyFirebaseData(data as Record<string, unknown>, rawDispatch);
-        }).catch(() => {});
-      }, 5000);
-    }
   }, []);
 
   const refresh = useCallback(async () => {
@@ -362,11 +353,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     } catch {}
   }, []);
 
-  // Firebase SSE 실시간 스트리밍 (변경 즉시 반영)
+  // Firebase SSE 실시간 스트리밍
   useEffect(() => {
     const FB_URL = 'https://gongteo--lms-default-rtdb.firebaseio.com';
-    const LOCAL_GRACE = 3 * 1000;
+    const LOCAL_GRACE = 1000; // 1초: 로컬 쓰기 완료 충분한 시간
     let es: EventSource | null = null;
+    let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
 
     const applyData = (data: unknown, isInitial = false) => {
@@ -381,40 +373,62 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       setReady(true);
     };
 
-    const connectSSE = () => {
+    const reload = () => fbGet('lms').then(d => applyData(d)).catch(() => {});
+
+    const connect = () => {
+      if (es) { es.close(); es = null; }
       try {
         es = new EventSource(`${FB_URL}/lms.json`);
+
         es.addEventListener('put', (e: MessageEvent) => {
           try {
-            const { data } = JSON.parse(e.data) as { path: string; data: unknown };
-            applyData(data);
+            const { path, data } = JSON.parse(e.data) as { path: string; data: unknown };
+            if (path === '/') {
+              // 최초 연결 시 전체 데이터
+              applyData(data);
+            } else {
+              // 부분 경로 변경 → 전체 재로드
+              reload();
+            }
           } catch {}
         });
-        es.addEventListener('patch', () => {
-          // patch 이벤트 시 전체 재로드
-          fbGet('lms').then(d => applyData(d)).catch(() => {});
-        });
+
+        es.addEventListener('patch', reload);
+
         es.onerror = () => {
           es?.close();
           es = null;
-          // SSE 실패 시 15초 폴링으로 폴백
+          // 2초 후 재연결 시도
+          if (!reconnectTimer) {
+            reconnectTimer = setTimeout(() => {
+              reconnectTimer = null;
+              connect();
+            }, 2000);
+          }
+          // 재연결 실패 대비 5초 폴백 폴링 시작
           if (!fallbackInterval) {
-            fallbackInterval = setInterval(() => {
-              fbGet('lms').then(d => applyData(d)).catch(() => {});
-            }, 15000);
+            fallbackInterval = setInterval(reload, 5000);
           }
         };
+
+        // SSE 정상 연결되면 폴백 폴링 중단
+        es.addEventListener('open', () => {
+          if (fallbackInterval) { clearInterval(fallbackInterval); fallbackInterval = null; }
+        });
       } catch {
-        es = null;
+        // SSE 미지원 환경 → 5초 폴링
+        if (!fallbackInterval) {
+          fallbackInterval = setInterval(reload, 5000);
+        }
       }
     };
 
-    // 초기 로드
     fbGet('lms').then(d => applyData(d, true)).catch(() => setReady(true));
-    connectSSE();
+    connect();
 
     return () => {
       es?.close();
+      if (reconnectTimer) clearTimeout(reconnectTimer);
       if (fallbackInterval) clearInterval(fallbackInterval);
     };
   }, []);
