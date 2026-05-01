@@ -93,16 +93,36 @@ function EditHomeworkModal({ hw, onSave, onClose }: {
   hw: DayHomework; onSave: (u: DayHomework) => void; onClose: () => void;
 }) {
   const [form, setForm] = useState({ computer: hw.computer, textbook: hw.textbook, vocabulary: hw.vocabulary, other: hw.other });
+  const [day, setDay] = useState<HomeworkDay>(hw.day);
   return (
     <div className="modal-backdrop">
       <div className="modal" style={{ maxWidth: 460 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: 16 }}>숙제 내용 수정</div>
-            <div style={{ fontSize: 12, color: '#94a3b8' }}>{hw.studentName} · {DAY_LABELS[hw.day]}요일</div>
+            <div style={{ fontSize: 12, color: '#94a3b8' }}>{hw.studentName}</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
         </div>
+
+        {/* 제출 요일 변경 */}
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 6 }}>제출 요일</label>
+          <div style={{ display: 'flex', gap: 6 }}>
+            {ALL_DAYS.map(d => (
+              <button key={d} onClick={() => setDay(d)} style={{
+                flex: 1, padding: '8px 4px', borderRadius: 8, border: '2px solid',
+                borderColor: day === d ? '#6366f1' : '#e2e8f0',
+                background: day === d ? '#eff0ff' : 'white',
+                color: day === d ? '#6366f1' : '#64748b',
+                fontWeight: day === d ? 800 : 400, fontSize: 13, cursor: 'pointer', minHeight: 'unset',
+              }}>
+                {DAY_LABELS[d]}
+              </button>
+            ))}
+          </div>
+        </div>
+
         {(['computer', 'textbook', 'vocabulary', 'other'] as const).map(cat => (
           <div key={cat} style={{ marginBottom: 10 }}>
             <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 4 }}>{CAT_LABELS[cat]}</label>
@@ -113,7 +133,7 @@ function EditHomeworkModal({ hw, onSave, onClose }: {
         ))}
         <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
           <button className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>취소</button>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onSave({ ...hw, ...form })}>저장</button>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onSave({ ...hw, ...form, day })}>저장</button>
         </div>
       </div>
     </div>
