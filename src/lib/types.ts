@@ -25,7 +25,7 @@ export interface DollarCondition {
 
 export type HomeworkDay = 'mon' | 'tue' | 'wed' | 'thu' | 'fri';
 
-export type HomeworkStatus = 'pending' | 'agreed' | 'submitted' | 'confirmed' | 'approved' | 'rejected' | 'missed';
+export type HomeworkStatus = 'pending' | 'agreed' | 'submitted' | 'confirmed' | 'approved' | 'rejected' | 'missed' | 'no_hw';
 
 export interface DayHomework {
   id: string;
@@ -84,6 +84,7 @@ export interface AttendanceRecord {
   checkInTime: string;
   checkOutTime?: string;
   status: 'present' | 'late' | 'absent';
+  reason?: string;
 }
 
 export interface WeeklyReport {

@@ -18,9 +18,20 @@ export default function StudentLoginPage() {
   const [error, setError] = useState(false);
   const [shake, setShake] = useState(false);
 
-  const filtered = query.trim()
-    ? state.students.filter(s => s.name.includes(query.trim()))
-    : [];
+  const CHOSUNG = ['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+  const getChosung = (str: string) => str.split('').map(ch => {
+    const code = ch.charCodeAt(0) - 0xAC00;
+    return (code >= 0 && code <= 11171) ? CHOSUNG[Math.floor(code / 28 / 21)] : ch;
+  }).join('');
+  const matchName = (name: string, q: string) => {
+    if (name.includes(q)) return true;
+    if ([...q].every(ch => CHOSUNG.includes(ch))) return getChosung(name).includes(q);
+    return false;
+  };
+
+  const filtered = !query.trim() ? [] : state.students.filter(s =>
+    matchName(s.name, query.trim())
+  );
 
   const selectStudent = (s: typeof state.students[0]) => {
     setSelected(s);
@@ -122,9 +133,9 @@ export default function StudentLoginPage() {
                   </div>
                 </button>
               ))}
-              {filtered.length === 0 && query.trim() && (
+              {filtered.length === 0 && (
                 <div style={{ textAlign: 'center', padding: '30px 0', color: '#94a3b8', fontSize: 14 }}>
-                  "{query}" 검색 결과 없음
+                  {query.trim() ? `"${query}" 검색 결과 없음` : '이름을 입력하면 학생 목록이 나타납니다'}
                 </div>
               )}
             </div>

@@ -1,13 +1,14 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { localDateStr } from '@/lib/utils';
 import { useStore } from '@/lib/store';
 import { Student } from '@/lib/types';
 import { sheetsSync } from '@/lib/sheets';
-import { Plus, Edit2, Trash2, X, KeyRound, Upload, Download, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, X, KeyRound, Upload, Download, AlertCircle, CheckCircle2, QrCode } from 'lucide-react';
 import { DAY_LABELS, DAY_ORDER } from '@/lib/utils';
 import * as XLSX from 'xlsx';
+import QRCode from 'qrcode';
 
 const LEVELS = ['Level 1', 'Level 2', 'Level 3', 'Level 4', 'Level 5', '초급', '중급', '고급'];
 
@@ -265,7 +266,7 @@ function StudentModal({ student, onSave, onClose }: { student: Partial<Student> 
               <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>학년 *</label>
               <select value={form.grade || ''} onChange={e => set('grade', e.target.value)}>
                 <option value="">선택</option>
-                {['초4','초5','초6','중1','중2','중3','고1','고2','고3'].map(g => <option key={g} value={g}>{g}</option>)}
+                {['초1','초2','초3','초4','초5','초6','중1','중2','중3','고1','고2','고3'].map(g => <option key={g} value={g}>{g}</option>)}
               </select>
             </div>
             <div>
@@ -380,6 +381,69 @@ function StudentModal({ student, onSave, onClose }: { student: Partial<Student> 
   );
 }
 
+// ── 학생 QR 모달 ─────────────────────────────────────────
+function StudentQRModal({ student, onClose }: { student: Student; onClose: () => void }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [baseUrl, setBaseUrl] = useState('');
+
+  useEffect(() => {
+    setBaseUrl(window.location.origin);
+  }, []);
+
+  useEffect(() => {
+    if (!canvasRef.current || !baseUrl) return;
+    const url = `${baseUrl}/scan?id=${student.id}`;
+    QRCode.toCanvas(canvasRef.current, url, {
+      width: 220, margin: 2,
+      color: { dark: '#0f172a', light: '#ffffff' },
+    });
+  }, [baseUrl, student.id]);
+
+  const download = () => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const a = document.createElement('a');
+    a.download = `${student.name}-QR.png`;
+    a.href = c.toDataURL();
+    a.click();
+  };
+
+  const url = baseUrl ? `${baseUrl}/scan?id=${student.id}` : '';
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal" style={{ maxWidth: 340, textAlign: 'center' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 16 }}>{student.name} 개인 QR</div>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{student.grade} · {student.classGroup}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={22} /></button>
+        </div>
+
+        <div style={{ background: '#f8fafc', borderRadius: 16, padding: 20, marginBottom: 16, display: 'inline-block' }}>
+          <canvas ref={canvasRef} style={{ display: 'block', borderRadius: 8 }} />
+        </div>
+
+        <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 12, wordBreak: 'break-all', padding: '0 4px' }}>
+          {url}
+        </div>
+
+        <div style={{ background: '#eff0ff', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: '#4338ca', textAlign: 'left' }}>
+          스캔 시 <strong>입실 체크 · 퇴원 체크 · 내 페이지</strong> 중 선택 가능
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onClose} className="btn btn-outline" style={{ flex: 1 }}>닫기</button>
+          <button onClick={download} className="btn btn-primary" style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <Download size={14} /> 저장
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── 메인 페이지 ──────────────────────────────────────────
 export default function StudentsPage() {
   const { state, dispatch } = useStore();
@@ -388,6 +452,7 @@ export default function StudentsPage() {
   const [search, setSearch] = useState('');
   const [editPinId, setEditPinId] = useState<string | null>(null);
   const [editPinValue, setEditPinValue] = useState('');
+  const [qrStudent, setQrStudent] = useState<Student | null>(null);
 
   const filtered = state.students.filter(s =>
     s.name.includes(search) || s.grade.includes(search) || s.classGroup.includes(search)
@@ -462,6 +527,7 @@ export default function StudentsPage() {
                 <th>반</th>
                 <th>달러</th>
                 <th>비밀번호</th>
+                <th>QR</th>
                 <th>관리</th>
               </tr>
             </thead>
@@ -527,6 +593,11 @@ export default function StudentsPage() {
                     )}
                   </td>
                   <td>
+                    <button onClick={() => setQrStudent(s)} style={{ background: '#eff0ff', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 6, display: 'flex', alignItems: 'center' }}>
+                      <QrCode size={13} color="#6366f1" />
+                    </button>
+                  </td>
+                  <td>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button onClick={() => setModal(s)} style={{ background: '#eff6ff', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 6 }}><Edit2 size={13} color="#3b82f6" /></button>
                       <button onClick={() => del(s)} style={{ background: '#fef2f2', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 6 }}><Trash2 size={13} color="#ef4444" /></button>
@@ -542,6 +613,7 @@ export default function StudentsPage() {
 
       {modal !== false && <StudentModal student={modal} onSave={save} onClose={() => setModal(false)} />}
       {showUpload && <ExcelUploadModal existingNames={existingNames} onImport={importStudents} onClose={() => setShowUpload(false)} />}
+      {qrStudent && <StudentQRModal student={qrStudent} onClose={() => setQrStudent(null)} />}
     </div>
   );
 }

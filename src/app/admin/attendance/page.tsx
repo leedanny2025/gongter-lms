@@ -17,6 +17,7 @@ function EditModal({ record, onSave, onClose, onDelete }: { record: AttendanceRe
   const [checkIn, setCheckIn] = useState(record.checkInTime);
   const [checkOut, setCheckOut] = useState(record.checkOutTime || '');
   const [status, setStatus] = useState(record.status);
+  const [reason, setReason] = useState(record.reason || '');
   return (
     <div className="modal-backdrop">
       <div className="modal">
@@ -67,12 +68,26 @@ function EditModal({ record, onSave, onClose, onDelete }: { record: AttendanceRe
               ))}
             </div>
           </div>
+          {(status === 'late' || status === 'absent') && (
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>
+                사유 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(선택)</span>
+              </label>
+              <input
+                type="text"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder={status === 'late' ? '지각 사유 (예: 버스 지연)' : '결석 사유 (예: 감기)'}
+                style={{ fontSize: 13 }}
+              />
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button onClick={() => { if (confirm(`${record.studentName}의 출석 기록을 삭제할까요?`)) onDelete(); }}
             style={{ padding: '12px 14px', borderRadius: 10, border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>삭제</button>
           <button className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>취소</button>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onSave({ ...record, checkInTime: checkIn, checkOutTime: checkOut || undefined, status })}>저장</button>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onSave({ ...record, checkInTime: checkIn, checkOutTime: checkOut || undefined, status, reason: (status === 'late' || status === 'absent') && reason ? reason : undefined })}>저장</button>
         </div>
       </div>
     </div>
@@ -93,11 +108,12 @@ function AddModal({ onSave, onClose }: { onSave: (r: AttendanceRecord) => void; 
   const [time, setTime] = useState(localTime());
   const [checkOut, setCheckOut] = useState('');
   const [status, setStatus] = useState<'present' | 'late' | 'absent'>('present');
+  const [reason, setReason] = useState('');
 
   const save = () => {
     const s = state.students.find(x => x.id === studentId);
     if (!s) return alert('학생 선택');
-    onSave({ id: `a${Date.now()}`, studentId, studentName: s.name, classGroup: s.classGroup, date, checkInTime: time, checkOutTime: checkOut || undefined, status });
+    onSave({ id: `a${Date.now()}`, studentId, studentName: s.name, classGroup: s.classGroup, date, checkInTime: time, checkOutTime: checkOut || undefined, status, reason: (status === 'late' || status === 'absent') && reason ? reason : undefined });
   };
 
   return (
@@ -145,6 +161,20 @@ function AddModal({ onSave, onClose }: { onSave: (r: AttendanceRecord) => void; 
               ))}
             </div>
           </div>
+          {(status === 'late' || status === 'absent') && (
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>
+                사유 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(선택)</span>
+              </label>
+              <input
+                type="text"
+                value={reason}
+                onChange={e => setReason(e.target.value)}
+                placeholder={status === 'late' ? '지각 사유 (예: 버스 지연)' : '결석 사유 (예: 감기)'}
+                style={{ fontSize: 13 }}
+              />
+            </div>
+          )}
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 24 }}>
           <button className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>취소</button>

@@ -7,6 +7,52 @@ import { DayHomework, HomeworkDay, HomeworkStatus } from '@/lib/types';
 import { getWeekKey } from '@/lib/utils';
 import { Plus, CheckCircle, X, Pencil, Check } from 'lucide-react';
 
+const KO_DAY = ['일', '월', '화', '수', '목', '금', '토'];
+
+function DatePicker({ value, onChange, bg = '#f5f3ff', border = '#a5b4fc', label = '숙제 완료 예정일 (선택)' }: {
+  value: string;
+  onChange: (v: string) => void;
+  bg?: string;
+  border?: string;
+  label?: string;
+}) {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const options: Date[] = [];
+  for (let i = 0; i <= 14; i++) {
+    const d = new Date(today);
+    d.setDate(today.getDate() + i);
+    options.push(d);
+  }
+  const toVal = (d: Date) => d.toISOString().slice(0, 10);
+  return (
+    <div style={{ background: bg, borderRadius: 12, padding: '12px 14px', border: `1px solid ${border}` }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 10 }}>📅 {label}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {options.map((d, i) => {
+          const val = toVal(d);
+          const selected = value === val;
+          const label2 = i === 0 ? '오늘' : i === 1 ? '내일' : `${d.getMonth()+1}/${d.getDate()}`;
+          const dayName = KO_DAY[d.getDay()];
+          return (
+            <button key={val} onClick={() => onChange(selected ? '' : val)} style={{
+              padding: '5px 10px', borderRadius: 8, border: '1.5px solid',
+              borderColor: selected ? '#6366f1' : '#e2e8f0',
+              background: selected ? '#eff0ff' : 'white',
+              color: selected ? '#6366f1' : '#374151',
+              fontWeight: selected ? 800 : 400, fontSize: 12,
+              cursor: 'pointer', minHeight: 'unset', lineHeight: 1.4,
+            }}>
+              <div>{label2}</div>
+              <div style={{ fontSize: 10, opacity: 0.7 }}>{dayName}요일</div>
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 const DAYS: { key: HomeworkDay; label: string }[] = [
   { key: 'mon', label: '월' }, { key: 'tue', label: '화' },
   { key: 'wed', label: '수' }, { key: 'thu', label: '목' }, { key: 'fri', label: '금' },
@@ -24,7 +70,7 @@ type CatKey = 'computer' | 'textbook' | 'vocabulary' | 'other';
 const CAT_MAP = Object.fromEntries(CATS.map(c => [c.key, c])) as Record<CatKey, typeof CATS[number]>;
 
 const STATUS_EMOJI: Record<HomeworkStatus, string> = {
-  pending: '⏳', agreed: '📋', submitted: '🔄', confirmed: '✅', approved: '✅', rejected: '❌', missed: '❌',
+  pending: '⏳', agreed: '📋', submitted: '🔄', confirmed: '✅', approved: '✅', rejected: '❌', missed: '❌', no_hw: '📭',
 };
 
 const TOUCH = {
@@ -439,14 +485,8 @@ export default function StudentHomeworkPage() {
             <ItemList items={rangeItems} onRemove={(uid) => setRangeItems(p => p.filter(i => i.uid !== uid))} onEdit={editRange} />
             {rangeItems.length > 0 && (
               <>
-                <div style={{ marginTop: 14, background: '#f5f3ff', borderRadius: 12, padding: '12px 14px', border: '1px solid #c7d2fe' }}>
-                  <div style={{ fontSize: 12, fontWeight: 700, color: '#4338ca', marginBottom: 8 }}>📅 숙제 완료 예정일 (선택)</div>
-                  <input
-                    type="date"
-                    value={expectedDate}
-                    onChange={e => setExpectedDate(e.target.value)}
-                    style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #a5b4fc', fontSize: 14, background: 'white', outline: 'none', boxSizing: 'border-box' as const }}
-                  />
+                <div style={{ marginTop: 14 }}>
+                  <DatePicker value={expectedDate} onChange={setExpectedDate} bg="#f5f3ff" border="#c7d2fe" />
                 </div>
                 <button onClick={submitRange} style={{
                   width: '100%', marginTop: 10, padding: '13px', borderRadius: 12, border: 'none',
@@ -545,14 +585,8 @@ export default function StudentHomeworkPage() {
                 </div>
               );
             })}
-            <div style={{ marginTop: 12, background: '#f0fdf4', borderRadius: 12, padding: '12px 14px', border: '1px solid #bbf7d0' }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d', marginBottom: 8 }}>📅 숙제 완료 예정일 (선택)</div>
-              <input
-                type="date"
-                value={expectedDate}
-                onChange={e => setExpectedDate(e.target.value)}
-                style={{ width: '100%', padding: '8px 12px', borderRadius: 8, border: '1.5px solid #86efac', fontSize: 14, background: 'white', outline: 'none', boxSizing: 'border-box' }}
-              />
+            <div style={{ marginTop: 12 }}>
+              <DatePicker value={expectedDate} onChange={setExpectedDate} bg="#f0fdf4" border="#bbf7d0" />
             </div>
             {(() => {
               const checkedCount = displayItems.filter(i => !uncheckedUids.has(i.uid)).length;

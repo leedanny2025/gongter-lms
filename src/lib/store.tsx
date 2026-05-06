@@ -16,6 +16,7 @@ type Action =
   | { type: 'DELETE_CONDITION'; payload: string }
   | { type: 'ADD_HOMEWORK'; payload: DayHomework }
   | { type: 'UPDATE_HOMEWORK'; payload: DayHomework }
+  | { type: 'DELETE_HOMEWORK'; payload: string }
   | { type: 'APPROVE_HOMEWORK'; payload: string }
   | { type: 'REJECT_HOMEWORK'; payload: string }
   | { type: 'AGREE_HOMEWORK'; payload: string }
@@ -68,6 +69,7 @@ function reducer(state: AppData, action: Action): AppData {
       ],
     };
     case 'UPDATE_HOMEWORK': return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload.id ? action.payload : h) };
+    case 'DELETE_HOMEWORK': return { ...state, dayHomeworks: state.dayHomeworks.filter(h => h.id !== action.payload) };
     case 'APPROVE_HOMEWORK': return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload ? { ...h, status: 'approved', approvedAt: new Date().toISOString() } : h) };
     case 'REJECT_HOMEWORK':  return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload ? { ...h, status: 'rejected' } : h) };
     case 'AGREE_HOMEWORK':   return { ...state, dayHomeworks: state.dayHomeworks.map(h => h.id === action.payload ? { ...h, status: 'agreed', agreedAt: new Date().toISOString() } : h) };
@@ -126,6 +128,28 @@ function makeUndoEntry(action: Action, snap: AppData, rd: React.Dispatch<Action>
       const old = snap.students.find(s => s.id === action.payload);
       if (!old) return null;
       return { label: '학생 삭제', undo: () => { rd({ type: 'ADD_STUDENT', payload: old }); fbSet(`lms/students/${old.id}`, old); } };
+    }
+    case 'DELETE_HOMEWORK': {
+      const old = snap.dayHomeworks.find(h => h.id === action.payload);
+      if (!old) return null;
+      const delLabel = old.status === 'no_hw' ? `${old.studentName || ''} 숙제없음 삭제` : `${old.studentName || ''} 미이행 삭제`;
+      return { label: delLabel, undo: () => { rd({ type: 'ADD_HOMEWORK', payload: old }); fbSet(`lms/homework/${old.id}`, old); } };
+    }
+    case 'ADD_HOMEWORK': {
+      const prevHw = snap.dayHomeworks.find(h =>
+        h.studentId === action.payload.studentId &&
+        h.week === action.payload.week &&
+        h.day === action.payload.day
+      );
+      const name = action.payload.studentName || '';
+      const statusLabel = action.payload.status === 'no_hw' ? '숙제없음 설정'
+        : action.payload.status === 'missed' ? '미이행 처리'
+        : prevHw ? '숙제 변경' : '숙제 추가';
+      if (prevHw) {
+        return { label: `${name} ${statusLabel}`, undo: () => { rd({ type: 'UPDATE_HOMEWORK', payload: prevHw }); fbSet(`lms/homework/${prevHw.id}`, prevHw); } };
+      }
+      const prevHomeworks = snap.dayHomeworks;
+      return { label: `${name} ${statusLabel}`, undo: () => { rd({ type: '_SET', payload: { dayHomeworks: prevHomeworks } }); fbDelete(`lms/homework/${action.payload.id}`); } };
     }
     case 'AGREE_HOMEWORK': {
       const old = snap.dayHomeworks.find(h => h.id === action.payload);
@@ -196,9 +220,11 @@ const StoreContext = createContext<{
   state: AppData;
   dispatch: React.Dispatch<Action>;
   refresh: () => Promise<void>;
+  loadCol: (col: ColName) => Promise<void>;
   undo: () => void;
   canUndo: boolean;
   undoLabel: string;
+  undoCount: number;
 } | null>(null);
 
 // 같은 studentId+week+day 조합이 중복될 경우 마지막 것만 유지
@@ -215,6 +241,38 @@ function dedupeAttendance(recs: AttendanceRecord[]): AttendanceRecord[] {
   return Array.from(map.values());
 }
 
+// 컬렉션 이름 → Firebase 경로 매핑
+const COLLECTIONS = ['students','homework','attendance','tests','attitude','conditions','settings','makeup','currentWeek','reports'] as const;
+export type ColName = typeof COLLECTIONS[number];
+
+
+function applyCollection(col: ColName, data: unknown, dispatch: React.Dispatch<Action>): void {
+  switch (col) {
+    case 'students':
+      dispatch({ type: '_SET', payload: { students: toArr<Student>(data) } }); break;
+    case 'homework':
+      dispatch({ type: '_SET', payload: { dayHomeworks: dedupeHomework(toArr<DayHomework>(data)) } }); break;
+    case 'attendance':
+      dispatch({ type: '_SET', payload: { attendanceRecords: dedupeAttendance(toArr<AttendanceRecord>(data)) } }); break;
+    case 'tests':
+      dispatch({ type: '_SET', payload: { testRecords: toArr<TestRecord>(data) } }); break;
+    case 'attitude':
+      dispatch({ type: '_SET', payload: { attitudeRecords: toArr<AttitudeRecord>(data) } }); break;
+    case 'conditions': {
+      const arr = toArr<DollarCondition>(data);
+      dispatch({ type: '_SET', payload: { dollarConditions: arr.length ? arr : initialData.dollarConditions } }); break;
+    }
+    case 'settings':
+      dispatch({ type: '_SET', payload: { attitudeDollarSettings: (data as Record<string,unknown>)?.attitudeDollar as AttitudeDollarSettings ?? initialData.attitudeDollarSettings } }); break;
+    case 'makeup':
+      dispatch({ type: '_SET', payload: { makeupRequests: toArr<MakeupRequest>(data) } }); break;
+    case 'currentWeek':
+      dispatch({ type: '_SET', payload: { currentWeek: (data as string) || initialData.currentWeek } }); break;
+    case 'reports':
+      dispatch({ type: '_SET', payload: { reports: toArr<StudentReport>(data) } }); break;
+  }
+}
+
 function applyFirebaseData(data: Record<string, unknown>, dispatch: React.Dispatch<Action>) {
   const fbConditions = toArr<DollarCondition>(data.conditions);
   dispatch({ type: '_SET', payload: {
@@ -226,8 +284,7 @@ function applyFirebaseData(data: Record<string, unknown>, dispatch: React.Dispat
     makeupRequests:    toArr<MakeupRequest>(data.makeup),
     reports:           toArr<StudentReport>(data.reports),
     currentWeek:       (data.currentWeek as string | undefined) ?? initialData.currentWeek,
-    attitudeDollarSettings: (data.settings as any)?.attitudeDollar ?? initialData.attitudeDollarSettings,
-    // Firebase 조건이 있으면 우선, 없으면 기본값 사용
+    attitudeDollarSettings: (data.settings as Record<string,unknown>)?.attitudeDollar as AttitudeDollarSettings ?? initialData.attitudeDollarSettings,
     dollarConditions:  fbConditions.length ? fbConditions : initialData.dollarConditions,
   }});
 }
@@ -275,6 +332,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       case 'ADD_HOMEWORK':
       case 'UPDATE_HOMEWORK':
         fbSet(`lms/homework/${action.payload.id}`, action.payload); break;
+      case 'DELETE_HOMEWORK':
+        fbDelete(`lms/homework/${action.payload}`); break;
       case 'APPROVE_HOMEWORK': {
         const hw = s.dayHomeworks.find(h => h.id === action.payload);
         if (hw) { const u = { ...hw, status: 'approved', approvedAt: new Date().toISOString() }; fbSet(`lms/homework/${hw.id}`, u); sheetsSync.homework(u); } break;
@@ -340,10 +399,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
 
     if (undoEntry) {
-      undoStackRef.current = [...undoStackRef.current.slice(-14), undoEntry];
+      undoStackRef.current = [...undoStackRef.current.slice(-4), undoEntry];
       setUndoStackLen(undoStackRef.current.length);
     }
 
+  }, []);
+
+  const loadCol = useCallback(async (_col: ColName) => {
+    try {
+      const d = await fbGet('lms');
+      if (d && typeof d === 'object') applyFirebaseData(d as Record<string, unknown>, rawDispatch);
+    } catch {}
   }, []);
 
   const refresh = useCallback(async () => {
@@ -356,7 +422,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Firebase SSE 실시간 스트리밍
   useEffect(() => {
     const FB_URL = 'https://gongteo--lms-default-rtdb.firebaseio.com';
-    const LOCAL_GRACE = 1000; // 1초: 로컬 쓰기 완료 충분한 시간
+    const LOCAL_GRACE = 1000;
     let es: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
@@ -365,10 +431,6 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!isInitial && Date.now() - lastLocalActionRef.current < LOCAL_GRACE) return;
       if (data && typeof data === 'object') {
         applyFirebaseData(data as Record<string, unknown>, rawDispatch);
-        const storedWeek = (data as Record<string, unknown>).currentWeek as string | undefined;
-        if (storedWeek && storedWeek !== getWeekKey()) {
-          dispatch({ type: 'WEEK_RESET', payload: getWeekKey() });
-        }
       }
       setReady(true);
     };
@@ -379,47 +441,24 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (es) { es.close(); es = null; }
       try {
         es = new EventSource(`${FB_URL}/lms.json`);
-
         es.addEventListener('put', (e: MessageEvent) => {
           try {
-            const { path, data } = JSON.parse(e.data) as { path: string; data: unknown };
-            if (path === '/') {
-              // 최초 연결 시 전체 데이터
-              applyData(data);
-            } else {
-              // 부분 경로 변경 → 전체 재로드
-              reload();
-            }
+            const { path } = JSON.parse(e.data) as { path: string; data: unknown };
+            // Always reload from API (Supabase) instead of applying Firebase SSE data directly
+            if (path !== '/') { reload(); }
           } catch {}
         });
-
         es.addEventListener('patch', reload);
-
         es.onerror = () => {
-          es?.close();
-          es = null;
-          // 2초 후 재연결 시도
-          if (!reconnectTimer) {
-            reconnectTimer = setTimeout(() => {
-              reconnectTimer = null;
-              connect();
-            }, 2000);
-          }
-          // 재연결 실패 대비 5초 폴백 폴링 시작
-          if (!fallbackInterval) {
-            fallbackInterval = setInterval(reload, 5000);
-          }
+          es?.close(); es = null;
+          if (!reconnectTimer) reconnectTimer = setTimeout(() => { reconnectTimer = null; connect(); }, 2000);
+          if (!fallbackInterval) fallbackInterval = setInterval(reload, 15000);
         };
-
-        // SSE 정상 연결되면 폴백 폴링 중단
         es.addEventListener('open', () => {
           if (fallbackInterval) { clearInterval(fallbackInterval); fallbackInterval = null; }
         });
       } catch {
-        // SSE 미지원 환경 → 5초 폴링
-        if (!fallbackInterval) {
-          fallbackInterval = setInterval(reload, 5000);
-        }
+        if (!fallbackInterval) fallbackInterval = setInterval(reload, 15000);
       }
     };
 
@@ -437,7 +476,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const undoLabel = undoStackLen > 0 ? undoStackRef.current[undoStackLen - 1].label : '';
 
   return (
-    <StoreContext.Provider value={{ state, dispatch, refresh, undo, canUndo, undoLabel }}>
+    <StoreContext.Provider value={{ state, dispatch, refresh, loadCol, undo, canUndo, undoLabel, undoCount: undoStackLen }}>
       {!ready
         ? <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#f8fafc' }}>
             <div style={{ textAlign: 'center' }}>

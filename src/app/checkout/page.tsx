@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { GraduationCap, CheckCircle, LogOut, UserCheck } from 'lucide-react';
 
@@ -17,6 +18,8 @@ function localTimeStr(d: Date) {
 
 function CheckOutContent() {
   const { state, dispatch, refresh } = useStore();
+  const searchParams = useSearchParams();
+  const idParam = searchParams.get('id');
 
   const [step, setStep] = useState<'enter' | 'pick' | 'confirm' | 'done'>('enter');
   const [nameInput, setNameInput] = useState('');
@@ -28,6 +31,16 @@ function CheckOutContent() {
     const t = setInterval(() => setNow(new Date()), 1000);
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    if (!idParam) return;
+    if (state.students.length === 0) { refresh(); return; }
+    const student = state.students.find(s => s.id === idParam);
+    if (student && step === 'enter') {
+      setSelectedStudent(student);
+      setStep('confirm');
+    }
+  }, [idParam, state.students]);
 
   const todayStr = localDateStr(now);
   const timeStr = localTimeStr(now);
