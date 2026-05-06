@@ -2,9 +2,10 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
+import { fbDelete } from '@/lib/firebase';
 import { TestRecord } from '@/lib/types';
 import { Student } from '@/lib/types';
-import { Plus, CheckCircle, ImageIcon, X, Upload } from 'lucide-react';
+import { Plus, CheckCircle, ImageIcon, X, Upload, Pencil, Trash2 } from 'lucide-react';
 import { localDateStr, getWeekKey } from '@/lib/utils';
 
 function AddTestModal({ onSave, onClose }: { onSave: (t: TestRecord) => void; onClose: () => void }) {
@@ -75,6 +76,64 @@ function AddTestModal({ onSave, onClose }: { onSave: (t: TestRecord) => void; on
               <div style={{ fontSize: 13 }}>사진을 드래그하거나 클릭하여 업로드</div>
               <div style={{ fontSize: 11, marginTop: 4 }}>JPG, PNG 지원</div>
             </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
+          <button className="btn-outline" onClick={onClose}>취소</button>
+          <button className="btn-primary" onClick={save}>저장</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function EditTestModal({ record, onSave, onClose }: { record: TestRecord; onSave: (t: TestRecord) => void; onClose: () => void }) {
+  const [subject, setSubject] = useState(record.subject);
+  const [score, setScore] = useState(record.score?.toString() ?? '');
+  const [maxScore, setMaxScore] = useState(record.maxScore.toString());
+  const [date, setDate] = useState(record.date);
+
+  const save = () => {
+    const s = score !== '' ? Number(score) : null;
+    onSave({
+      ...record,
+      subject,
+      score: s,
+      maxScore: Number(maxScore),
+      date,
+      status: s !== null ? 'confirmed' : 'pending',
+      confirmedAt: s !== null ? (record.confirmedAt ?? new Date().toISOString()) : undefined,
+    });
+  };
+
+  return (
+    <div className="modal-backdrop">
+      <div className="modal">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+          <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>시험 점수 수정</h3>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+        </div>
+        <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 16, fontSize: 14, fontWeight: 600 }}>
+          {record.studentName}
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>시험 과목</label>
+            <input value={subject} onChange={e => setSubject(e.target.value)} />
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>점수</label>
+              <input type="number" value={score} onChange={e => setScore(e.target.value)} placeholder="미입력" min="0" max={maxScore} />
+            </div>
+            <div>
+              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>만점</label>
+              <input type="number" value={maxScore} onChange={e => setMaxScore(e.target.value)} />
+            </div>
+          </div>
+          <div>
+            <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>날짜</label>
+            <input type="date" value={date} onChange={e => setDate(e.target.value)} />
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, marginTop: 24, justifyContent: 'flex-end' }}>
@@ -204,6 +263,7 @@ export default function TestsPage() {
   const { state, dispatch } = useStore();
   const [showAdd, setShowAdd] = useState(false);
   const [confirmRecord, setConfirmRecord] = useState<TestRecord | null>(null);
+  const [editRecord, setEditRecord] = useState<TestRecord | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
   const [summaryView, setSummaryView] = useState<'week' | 'all'>('week');
   const [detailStudent, setDetailStudent] = useState<Student | null>(null);
@@ -225,6 +285,17 @@ export default function TestsPage() {
   const confirmTest = (id: string, score: number) => {
     dispatch({ type: 'CONFIRM_TEST', payload: { id, score } });
     setConfirmRecord(null);
+  };
+
+  const updateTest = (t: TestRecord) => {
+    dispatch({ type: 'UPDATE_TEST', payload: t });
+    setEditRecord(null);
+  };
+
+  const deleteTest = (id: string) => {
+    if (!confirm('이 시험 기록을 삭제할까요?')) return;
+    dispatch({ type: '_SET', payload: { testRecords: state.testRecords.filter(t => t.id !== id) } });
+    fbDelete(`lms/tests/${id}`);
   };
 
   const getScoreColor = (score: number | null, max: number) => {
@@ -319,11 +390,19 @@ export default function TestsPage() {
                   </span>
                 </td>
                 <td>
-                  {t.status === 'pending' && (
-                    <button onClick={() => setConfirmRecord(t)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: '#dbeafe', color: '#1e40af', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
-                      <CheckCircle size={13} /> 확정
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+                    {t.status === 'pending' && (
+                      <button onClick={() => setConfirmRecord(t)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: '#dbeafe', color: '#1e40af', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                        <CheckCircle size={13} /> 확정
+                      </button>
+                    )}
+                    <button onClick={() => setEditRecord(t)} style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '5px 10px', borderRadius: 6, border: 'none', background: '#f1f5f9', color: '#475569', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}>
+                      <Pencil size={13} /> 수정
                     </button>
-                  )}
+                    <button onClick={() => deleteTest(t.id)} style={{ display: 'flex', alignItems: 'center', padding: '5px 8px', borderRadius: 6, border: 'none', background: '#fef2f2', color: '#ef4444', cursor: 'pointer', fontSize: 12 }}>
+                      <Trash2 size={13} />
+                    </button>
+                  </div>
                 </td>
               </tr>
             ))}
@@ -389,6 +468,7 @@ export default function TestsPage() {
 
       {showAdd && <AddTestModal onSave={addTest} onClose={() => setShowAdd(false)} />}
       {confirmRecord && <ScoreConfirmModal record={confirmRecord} onConfirm={confirmTest} onClose={() => setConfirmRecord(null)} />}
+      {editRecord && <EditTestModal record={editRecord} onSave={updateTest} onClose={() => setEditRecord(null)} />}
       {detailStudent && (
         <StudentScoreModal
           student={detailStudent}
