@@ -188,12 +188,27 @@ function ScoreConfirmModal({ record, onConfirm, onClose }: { record: TestRecord;
   );
 }
 
-function StudentScoreModal({ student, records, onClose }: { student: Student; records: TestRecord[]; onClose: () => void }) {
-  const sorted = [...records].sort((a, b) => a.date.localeCompare(b.date));
+function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose }: {
+  student: Student;
+  records: TestRecord[];
+  onAdd: (t: TestRecord) => void;
+  onEdit: (t: TestRecord) => void;
+  onDelete: (id: string) => void;
+  onClose: () => void;
+}) {
+  const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
   const confirmed = sorted.filter(r => r.status === 'confirmed' && r.score !== null);
   const avg = confirmed.length > 0
     ? Math.round(confirmed.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / confirmed.length)
     : null;
+
+  const [newDate, setNewDate] = useState(localDateStr());
+  const [newSubject, setNewSubject] = useState('영어 어휘 테스트');
+  const [newScore, setNewScore] = useState('');
+  const [newMax, setNewMax] = useState('20');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editScore, setEditScore] = useState('');
+  const [editMax, setEditMax] = useState('');
 
   const scoreColor = (score: number, max: number) => {
     const pct = (score / max) * 100;
@@ -205,55 +220,128 @@ function StudentScoreModal({ student, records, onClose }: { student: Student; re
     return `${Number(m)}/${Number(day)}`;
   };
 
+  const saveNew = () => {
+    if (!newScore) return;
+    onAdd({
+      id: `t${Date.now()}`,
+      studentId: student.id,
+      studentName: student.name,
+      subject: newSubject,
+      score: Number(newScore),
+      maxScore: Number(newMax),
+      submittedByStudent: false,
+      status: 'confirmed',
+      confirmedAt: new Date().toISOString(),
+      week: getWeekKey(),
+      date: newDate,
+    });
+    setNewScore('');
+  };
+
+  const startEdit = (t: TestRecord) => {
+    setEditingId(t.id);
+    setEditScore(t.score?.toString() ?? '');
+    setEditMax(t.maxScore.toString());
+  };
+
+  const saveEdit = (t: TestRecord) => {
+    onEdit({ ...t, score: editScore !== '' ? Number(editScore) : null, maxScore: Number(editMax), status: editScore !== '' ? 'confirmed' : 'pending' });
+    setEditingId(null);
+  };
+
   return (
     <div className="modal-backdrop">
-      <div className="modal" style={{ maxWidth: 420 }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+      <div className="modal" style={{ maxWidth: 440 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
-            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{student.name} 점수 누적</h3>
+            <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{student.name}</h3>
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{student.classGroup} · 총 {sorted.length}회</div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={22} /></button>
         </div>
 
+        {/* 점수 추가 폼 */}
+        <div style={{ background: '#f0f9ff', borderRadius: 14, padding: '14px 16px', marginBottom: 16, border: '1px solid #bae6fd' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#0369a1', marginBottom: 10 }}>+ 점수 추가</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 8 }}>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>날짜</label>
+              <input type="date" value={newDate} onChange={e => setNewDate(e.target.value)} style={{ fontSize: 13, padding: '7px 10px' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>시험명</label>
+              <input value={newSubject} onChange={e => setNewSubject(e.target.value)} style={{ fontSize: 13, padding: '7px 10px' }} />
+            </div>
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 80px', gap: 8, alignItems: 'flex-end' }}>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>맞은 점수</label>
+              <input type="number" value={newScore} onChange={e => setNewScore(e.target.value)} placeholder="0" min="0" style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', padding: '7px 10px' }} />
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>전체 점수</label>
+              <input type="number" value={newMax} onChange={e => setNewMax(e.target.value)} placeholder="20" min="1" style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', padding: '7px 10px' }} />
+            </div>
+            <button onClick={saveNew} disabled={!newScore} style={{ padding: '9px 0', borderRadius: 8, border: 'none', background: newScore ? '#0ea5e9' : '#e2e8f0', color: newScore ? 'white' : '#94a3b8', fontWeight: 700, fontSize: 13, cursor: newScore ? 'pointer' : 'default' }}>
+              저장
+            </button>
+          </div>
+        </div>
+
         {avg !== null && (
-          <div style={{ background: '#f0f9ff', borderRadius: 12, padding: '12px 16px', marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: '#0369a1' }}>전체 평균</span>
-            <span style={{ fontSize: 24, fontWeight: 900, color: scoreColor(avg, 100) }}>{avg}%</span>
+          <div style={{ background: '#f8fafc', borderRadius: 10, padding: '10px 14px', marginBottom: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: '#475569' }}>전체 평균</span>
+            <span style={{ fontSize: 22, fontWeight: 900, color: scoreColor(avg, 100) }}>{avg}%</span>
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 360, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
           {sorted.length === 0 && (
-            <div style={{ textAlign: 'center', padding: 32, color: '#94a3b8' }}>시험 기록이 없습니다</div>
+            <div style={{ textAlign: 'center', padding: 24, color: '#94a3b8', fontSize: 13 }}>시험 기록이 없습니다</div>
           )}
           {sorted.map(t => (
-            <div key={t.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 10, background: '#f8fafc', border: '1px solid #f1f5f9' }}>
-              <div style={{ fontSize: 15, fontWeight: 800, color: '#475569', minWidth: 36 }}>{fmtDate(t.date)}</div>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 600 }}>{t.subject}</div>
-                {t.status !== 'confirmed' && (
-                  <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>대기중</span>
-                )}
-              </div>
-              <div style={{ textAlign: 'right' }}>
-                {t.score !== null ? (
-                  <>
-                    <span style={{ fontSize: 18, fontWeight: 800, color: scoreColor(t.score, t.maxScore) }}>{t.score}</span>
-                    <span style={{ fontSize: 12, color: '#94a3b8' }}>/{t.maxScore}</span>
-                    <div style={{ fontSize: 11, color: scoreColor(t.score, t.maxScore), fontWeight: 600 }}>
-                      {Math.round((t.score / t.maxScore) * 100)}%
-                    </div>
-                  </>
-                ) : (
-                  <span style={{ fontSize: 13, color: '#94a3b8' }}>미입력</span>
-                )}
-              </div>
+            <div key={t.id} style={{ borderRadius: 10, background: '#f8fafc', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
+              {editingId === t.id ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', minWidth: 32 }}>{fmtDate(t.date)}</div>
+                  <div style={{ fontSize: 12, color: '#94a3b8', flex: 1 }}>{t.subject}</div>
+                  <input type="number" value={editScore} onChange={e => setEditScore(e.target.value)} placeholder="점수" min="0" style={{ width: 52, fontSize: 15, fontWeight: 700, textAlign: 'center', padding: '4px 6px' }} />
+                  <span style={{ color: '#94a3b8', fontSize: 13 }}>/</span>
+                  <input type="number" value={editMax} onChange={e => setEditMax(e.target.value)} min="1" style={{ width: 52, fontSize: 15, fontWeight: 700, textAlign: 'center', padding: '4px 6px' }} />
+                  <button onClick={() => saveEdit(t)} style={{ padding: '4px 10px', borderRadius: 6, border: 'none', background: '#22c55e', color: 'white', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>저장</button>
+                  <button onClick={() => setEditingId(null)} style={{ padding: '4px 8px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', fontSize: 12, cursor: 'pointer' }}>취소</button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px' }}>
+                  <div style={{ fontSize: 14, fontWeight: 800, color: '#475569', minWidth: 32 }}>{fmtDate(t.date)}</div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 12, fontWeight: 600 }}>{t.subject}</div>
+                    {t.status !== 'confirmed' && <span style={{ fontSize: 10, color: '#f59e0b', fontWeight: 600 }}>대기중</span>}
+                  </div>
+                  <div style={{ textAlign: 'right', minWidth: 64 }}>
+                    {t.score !== null ? (
+                      <>
+                        <span style={{ fontSize: 17, fontWeight: 800, color: scoreColor(t.score, t.maxScore) }}>{t.score}</span>
+                        <span style={{ fontSize: 11, color: '#94a3b8' }}>/{t.maxScore}</span>
+                        <div style={{ fontSize: 11, color: scoreColor(t.score, t.maxScore), fontWeight: 600 }}>{Math.round((t.score / t.maxScore) * 100)}%</div>
+                      </>
+                    ) : (
+                      <span style={{ fontSize: 12, color: '#94a3b8' }}>미입력</span>
+                    )}
+                  </div>
+                  <button onClick={() => startEdit(t)} style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: '#f1f5f9', color: '#475569', cursor: 'pointer' }}>
+                    <Pencil size={12} />
+                  </button>
+                  <button onClick={() => onDelete(t.id)} style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }}>
+                    <Trash2 size={12} />
+                  </button>
+                </div>
+              )}
             </div>
           ))}
         </div>
 
-        <button className="btn btn-outline" style={{ width: '100%', marginTop: 16 }} onClick={onClose}>닫기</button>
+        <button className="btn btn-outline" style={{ width: '100%', marginTop: 14 }} onClick={onClose}>닫기</button>
       </div>
     </div>
   );
@@ -473,6 +561,9 @@ export default function TestsPage() {
         <StudentScoreModal
           student={detailStudent}
           records={state.testRecords.filter(t => t.studentId === detailStudent.id)}
+          onAdd={addTest}
+          onEdit={updateTest}
+          onDelete={deleteTest}
           onClose={() => setDetailStudent(null)}
         />
       )}
