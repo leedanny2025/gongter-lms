@@ -15,12 +15,23 @@ function sbHeaders(extra?: Record<string, string>) {
   };
 }
 
+async function fbFallback(path: string) {
+  const res = await fetch(`${FB_URL}/${path}.json`, { cache: 'no-store' });
+  return NextResponse.json(await res.json());
+}
+
 export async function GET(req: NextRequest) {
-  if (!SB_URL) {
-    const path = new URL(req.url).searchParams.get('path') || 'lms';
-    const res = await fetch(`${FB_URL}/${path}.json`, { cache: 'no-store' });
-    return NextResponse.json(await res.json());
-  }
+  const path = new URL(req.url).searchParams.get('path') || 'lms';
+
+  if (!SB_URL) return fbFallback(path);
+
+  // Check Supabase health before using it
+  const probe = await fetch(`${SB_URL}/rest/v1/students?select=id&limit=1`, {
+    headers: sbHeaders(),
+    cache: 'no-store',
+  }).catch(() => null);
+
+  if (!probe || !probe.ok) return fbFallback(path);
 
   const results = await Promise.all(
     TABLES.map(async table => {
@@ -48,14 +59,16 @@ export async function POST(req: NextRequest) {
   const body = await req.json();
   const { path, data, method } = body;
 
-  if (!SB_URL) {
+  const fbWrite = async () => {
     const res = await fetch(`${FB_URL}/${path}.json`, {
       method: method || 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: method === 'DELETE' ? undefined : JSON.stringify(data),
     });
     return NextResponse.json({ ok: true, result: await res.json().catch(() => null) });
-  }
+  };
+
+  if (!SB_URL) return fbWrite();
 
   const parts = path.split('/');
   const table = parts[1];
@@ -64,19 +77,21 @@ export async function POST(req: NextRequest) {
 
   try {
     if (method === 'DELETE') {
-      await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
+      const res = await fetch(`${SB_URL}/rest/v1/${table}?id=eq.${encodeURIComponent(id)}`, {
         method: 'DELETE',
         headers: sbHeaders(),
       });
+      if (!res.ok) return fbWrite();
     } else {
-      await fetch(`${SB_URL}/rest/v1/${table}`, {
+      const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
         method: 'POST',
         headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates' }),
         body: JSON.stringify({ id, data }),
       });
+      if (!res.ok) return fbWrite();
     }
     return NextResponse.json({ ok: true });
   } catch {
-    return NextResponse.json({ ok: false });
+    return fbWrite();
   }
 }
