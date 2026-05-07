@@ -252,7 +252,23 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
             </div>
           )}
           {hw.status === 'missed' && (
-            <div style={{ flex: 1, textAlign: 'center', padding: '10px 0', fontSize: 14, color: '#ef4444', fontWeight: 700 }}>❌ 미이행 처리됨</div>
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 2 }}>상태 변경</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                <button onClick={() => { onAction('UPDATE_HOMEWORK', { ...hw, status: 'agreed', agreedAt: new Date().toISOString() }); onClose(); }}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: 9, border: 'none', background: '#eff0ff', color: '#4338ca', cursor: 'pointer', fontSize: 13, fontWeight: 700, minHeight: 'unset' }}>
+                  ✏️ 진행 중
+                </button>
+                <button onClick={() => { onAction('CONFIRM_HOMEWORK', { id: hw.id, result: 'confirmed' }); onClose(); }}
+                  style={{ flex: 1, padding: '10px 12px', borderRadius: 9, border: 'none', background: '#d1fae5', color: '#15803d', cursor: 'pointer', fontSize: 13, fontWeight: 700, minHeight: 'unset' }}>
+                  ✅ 완료
+                </button>
+                <button onClick={() => { onAction('DELETE_HOMEWORK', hw.id); onClose(); }}
+                  style={{ padding: '10px 12px', borderRadius: 9, border: '1px solid #e2e8f0', background: 'white', color: '#94a3b8', cursor: 'pointer', fontSize: 13, fontWeight: 700, minHeight: 'unset' }}>
+                  되돌리기
+                </button>
+              </div>
+            </div>
           )}
           {hw.status === 'no_hw' && (
             <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 10 }}>

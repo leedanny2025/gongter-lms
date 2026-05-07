@@ -40,13 +40,6 @@ export default function AdminDashboard() {
   };
 
   const todayStr = localDateStr();
-  const weekHW = state.dayHomeworks.filter(h => h.week === week);
-  const weekTests = state.testRecords.filter(t => t.week === week);
-  const todayAtt = state.attendanceRecords.filter(a => a.date === todayStr);
-
-  const pendingHW = weekHW.filter(h => h.status === 'pending').length;
-  const pendingTests = weekTests.filter(t => t.status === 'pending').length;
-  const totalDollars = state.students.reduce((s, x) => s + x.dollars, 0);
 
   // 이번 주 Mon–Fri 날짜 계산
   const { start: weekStart } = getWeekDateRange(week);
@@ -55,7 +48,15 @@ export default function AdminDashboard() {
     d.setDate(weekStart.getDate() + i);
     return localDateStr(d);
   });
+
+  const weekHW = state.dayHomeworks.filter(h => h.week === week);
+  const weekTests = state.testRecords.filter(t => weekDates.includes(t.date));
   const weekAtt = state.attendanceRecords.filter(a => weekDates.includes(a.date));
+  const todayAtt = state.attendanceRecords.filter(a => a.date === todayStr);
+
+  const pendingHW = weekHW.filter(h => h.status === 'pending').length;
+  const pendingTests = weekTests.filter(t => t.status === 'pending').length;
+  const totalDollars = state.students.reduce((s, x) => s + x.dollars, 0);
 
   // 달러 계산
   const enabledConditions = state.dollarConditions.filter(c => c.enabled);
@@ -65,7 +66,7 @@ export default function AdminDashboard() {
   const conditionMet = (studentId: string, type: string): boolean => {
     if (type === 'attendance') return state.attendanceRecords.filter(a => a.studentId === studentId && a.status !== 'absent').length >= 2;
     if (type === 'homework') return state.dayHomeworks.some(h => h.studentId === studentId && h.week === week && h.status === 'approved');
-    if (type === 'test') return state.testRecords.some(t => t.studentId === studentId && t.week === week && t.status === 'confirmed');
+    if (type === 'test') return state.testRecords.some(t => t.studentId === studentId && weekDates.includes(t.date) && t.status === 'confirmed');
     if (type === 'attitude') {
       const score = (state.attitudeRecords || [])
         .filter(r => r.studentId === studentId && r.week === week)
@@ -79,6 +80,7 @@ export default function AdminDashboard() {
 
   const DAY_KO = ['월', '화', '수', '목', '금'];
   const DAYS_HW = ['mon', 'tue', 'wed', 'thu', 'fri'] as const;
+  const dateToDay = (date: string) => DAYS_HW[new Date(date + 'T12:00:00').getDay() - 1] ?? null;
 
   return (
     <div>
@@ -263,7 +265,7 @@ export default function AdminDashboard() {
             <div key={s.id} style={GRID_ROW}>
               <div style={NAME_CELL}>{s.name}</div>
               {DAYS_HW.map(day => {
-                const test = weekTests.find(t => t.studentId === s.id && t.day === day);
+                const test = weekTests.find(t => t.studentId === s.id && dateToDay(t.date) === day);
                 if (!test) {
                   return (
                     <div key={day} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, color: '#cbd5e1' }}>·</div>
