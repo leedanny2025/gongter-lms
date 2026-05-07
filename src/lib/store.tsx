@@ -443,9 +443,14 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         es = new EventSource(`${FB_URL}/lms.json`);
         es.addEventListener('put', (e: MessageEvent) => {
           try {
-            const { path } = JSON.parse(e.data) as { path: string; data: unknown };
-            // Always reload from API (Supabase) instead of applying Firebase SSE data directly
-            if (path !== '/') { reload(); }
+            const { path, data } = JSON.parse(e.data) as { path: string; data: unknown };
+            if (path === '/') {
+              // Use Firebase data as fallback when Supabase returned nothing
+              const isEmpty = stateRef.current.students.length === 0 && stateRef.current.testRecords.length === 0;
+              if (isEmpty) applyData(data, true);
+            } else {
+              reload();
+            }
           } catch {}
         });
         es.addEventListener('patch', reload);
