@@ -132,10 +132,10 @@ export default function AdminDashboard() {
                   : st === 'pending'   ? { e: '⏳', bg: '#fef3c7' }
                   : st === 'rejected'  ? { e: '❌', bg: '#fee2e2' }
                   : st === 'missed'    ? { e: '✗', bg: '#fed7aa' }
-                  : st === 'no_hw'     ? { e: '없', bg: '#e0f2fe' }
+                  : st === 'no_hw'     ? { e: '—', bg: '#f1f5f9' }
                   : { e: '·', bg: '#f1f5f9' };
                 return (
-                  <div key={day} title={st || (isScheduled ? '미제출' : '보충')} style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: 14 }}>
+                  <div key={day} title={st === 'no_hw' ? '숙제없음' : st || (isScheduled ? '미제출' : '보충')} style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: st === 'no_hw' ? 12 : 14, color: st === 'no_hw' ? '#94a3b8' : undefined }}>
                     {cell.e}
                   </div>
                 );
@@ -144,7 +144,7 @@ export default function AdminDashboard() {
           ))}
           {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
-            {[['⏳','확인대기'],['📋','합의됨'],['🔄','완료확인'],['✅','완료'],['❌','반려'],['✗','미이행'],['없','숙제없음']].map(([e, l]) => (
+            {[['⏳','확인대기'],['📋','합의됨'],['🔄','완료확인'],['✅','완료'],['❌','반려'],['✗','미이행'],['—','숙제없음']].map(([e, l]) => (
               <span key={l} style={{ fontSize: 11, color: '#64748b' }}>{e} {l}</span>
             ))}
           </div>
