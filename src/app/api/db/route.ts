@@ -1,10 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+export const dynamic = 'force-dynamic';
+
 const SB_URL = process.env.SUPABASE_URL || '';
 const SB_KEY = process.env.SUPABASE_KEY || '';
 const FB_URL = 'https://gongteo--lms-default-rtdb.firebaseio.com';
 
 const TABLES = ['students', 'attendance', 'homework', 'tests', 'attitude', 'conditions', 'makeup', 'settings'];
+
+const NO_CACHE = { cache: 'no-store' as const };
 
 function sbHeaders(extra?: Record<string, string>) {
   return {
@@ -15,11 +19,13 @@ function sbHeaders(extra?: Record<string, string>) {
   };
 }
 
+const noStoreHeaders = { 'Cache-Control': 'no-store, no-cache, must-revalidate' };
+
 export async function GET(req: NextRequest) {
   if (!SB_URL) {
     const path = new URL(req.url).searchParams.get('path') || 'lms';
-    const res = await fetch(`${FB_URL}/${path}.json`);
-    return NextResponse.json(await res.json());
+    const res = await fetch(`${FB_URL}/${path}.json`, NO_CACHE);
+    return NextResponse.json(await res.json(), { headers: noStoreHeaders });
   }
 
   const results = await Promise.all(
@@ -27,7 +33,7 @@ export async function GET(req: NextRequest) {
       try {
         const res = await fetch(`${SB_URL}/rest/v1/${table}?select=*`, {
           headers: sbHeaders(),
-          cache: 'no-store',
+          ...NO_CACHE,
         });
         const rows: { id: string; data: unknown }[] = await res.json().catch(() => []);
         const obj: Record<string, unknown> = {};
@@ -41,7 +47,7 @@ export async function GET(req: NextRequest) {
     })
   );
 
-  return NextResponse.json(Object.fromEntries(results));
+  return NextResponse.json(Object.fromEntries(results), { headers: noStoreHeaders });
 }
 
 export async function POST(req: NextRequest) {
@@ -69,14 +75,20 @@ export async function POST(req: NextRequest) {
         headers: sbHeaders(),
       });
     } else {
-      await fetch(`${SB_URL}/rest/v1/${table}`, {
+      const res = await fetch(`${SB_URL}/rest/v1/${table}`, {
         method: 'POST',
         headers: sbHeaders({ 'Prefer': 'resolution=merge-duplicates' }),
         body: JSON.stringify({ id, data }),
       });
+      if (!res.ok) {
+        const err = await res.text().catch(() => '');
+        console.error(`Supabase write failed [${table}/${id}]:`, res.status, err);
+        return NextResponse.json({ ok: false, status: res.status, error: err });
+      }
     }
     return NextResponse.json({ ok: true });
-  } catch {
+  } catch (e) {
+    console.error('DB POST error:', e);
     return NextResponse.json({ ok: false });
   }
 }

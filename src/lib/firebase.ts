@@ -15,7 +15,7 @@ export async function fbDelete(path: string) {
 }
 
 export async function fbGet(path = 'lms') {
-  const res = await fetch(`/api/db?path=${path}`);
+  const res = await fetch(`/api/db?path=${path}&t=${Date.now()}`, { cache: 'no-store' });
   if (!res.ok) throw new Error(`API ${res.status}`);
   return res.json();
 }

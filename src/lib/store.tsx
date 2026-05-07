@@ -422,7 +422,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   // Firebase SSE 실시간 스트리밍
   useEffect(() => {
     const FB_URL = 'https://gongteo--lms-default-rtdb.firebaseio.com';
-    const LOCAL_GRACE = 1000;
+    const LOCAL_GRACE = 5000;
     let es: EventSource | null = null;
     let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
     let fallbackInterval: ReturnType<typeof setInterval> | null = null;
