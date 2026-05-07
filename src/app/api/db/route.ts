@@ -27,7 +27,7 @@ export async function GET(req: NextRequest) {
       try {
         const res = await fetch(`${SB_URL}/rest/v1/${table}?select=*`, {
           headers: sbHeaders(),
-          next: { revalidate: 20 },
+          cache: 'no-store',
         });
         const rows: { id: string; data: unknown }[] = await res.json().catch(() => []);
         const obj: Record<string, unknown> = {};
