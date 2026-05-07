@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { fbDelete } from '@/lib/firebase';
 import { TestRecord } from '@/lib/types';
@@ -188,14 +188,13 @@ function ScoreConfirmModal({ record, onConfirm, onClose }: { record: TestRecord;
   );
 }
 
-function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose }: {
+function StudentScoreModal({ student, onClose }: {
   student: Student;
-  records: TestRecord[];
-  onAdd: (t: TestRecord) => void;
-  onEdit: (t: TestRecord) => void;
-  onDelete: (id: string) => void;
   onClose: () => void;
 }) {
+  const { state, dispatch, refresh } = useStore();
+
+  const records = state.testRecords.filter(t => t.studentId === student.id);
   const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
   const confirmed = sorted.filter(r => r.status === 'confirmed' && r.score !== null);
   const avg = confirmed.length > 0
@@ -209,6 +208,7 @@ function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose 
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editScore, setEditScore] = useState('');
   const [editMax, setEditMax] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const scoreColor = (score: number, max: number) => {
     const pct = (score / max) * 100;
@@ -220,9 +220,14 @@ function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose 
     return `${Number(m)}/${Number(day)}`;
   };
 
+  const doRefresh = () => {
+    setTimeout(() => refresh(), 1500);
+  };
+
   const saveNew = () => {
-    if (!newScore) return;
-    onAdd({
+    if (!newScore || saving) return;
+    setSaving(true);
+    dispatch({ type: 'ADD_TEST', payload: {
       id: `t${Date.now()}`,
       studentId: student.id,
       studentName: student.name,
@@ -234,8 +239,10 @@ function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose 
       confirmedAt: new Date().toISOString(),
       week: getWeekKey(),
       date: newDate,
-    });
+    }});
     setNewScore('');
+    setSaving(false);
+    doRefresh();
   };
 
   const startEdit = (t: TestRecord) => {
@@ -245,8 +252,21 @@ function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose 
   };
 
   const saveEdit = (t: TestRecord) => {
-    onEdit({ ...t, score: editScore !== '' ? Number(editScore) : null, maxScore: Number(editMax), status: editScore !== '' ? 'confirmed' : 'pending' });
+    dispatch({ type: 'UPDATE_TEST', payload: {
+      ...t,
+      score: editScore !== '' ? Number(editScore) : null,
+      maxScore: Number(editMax),
+      status: editScore !== '' ? 'confirmed' : 'pending',
+    }});
     setEditingId(null);
+    doRefresh();
+  };
+
+  const doDelete = (id: string) => {
+    if (!confirm('이 시험 기록을 삭제할까요?')) return;
+    dispatch({ type: '_SET', payload: { testRecords: state.testRecords.filter(t => t.id !== id) } });
+    fbDelete(`lms/tests/${id}`);
+    doRefresh();
   };
 
   return (
@@ -257,7 +277,10 @@ function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose 
             <h3 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>{student.name}</h3>
             <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{student.classGroup} · 총 {sorted.length}회</div>
           </div>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={22} /></button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {saving && <span style={{ fontSize: 11, color: '#0ea5e9' }}>저장 중...</span>}
+            <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={22} /></button>
+          </div>
         </div>
 
         {/* 점수 추가 폼 */}
@@ -332,7 +355,7 @@ function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose 
                   <button onClick={() => startEdit(t)} style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: '#f1f5f9', color: '#475569', cursor: 'pointer' }}>
                     <Pencil size={12} />
                   </button>
-                  <button onClick={() => onDelete(t.id)} style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }}>
+                  <button onClick={() => doDelete(t.id)} style={{ padding: '4px 6px', borderRadius: 6, border: 'none', background: '#fef2f2', color: '#ef4444', cursor: 'pointer' }}>
                     <Trash2 size={12} />
                   </button>
                 </div>
@@ -348,8 +371,13 @@ function StudentScoreModal({ student, records, onAdd, onEdit, onDelete, onClose 
 }
 
 export default function TestsPage() {
-  const { state, dispatch } = useStore();
+  const { state, dispatch, refresh, loadCol } = useStore();
   const [showAdd, setShowAdd] = useState(false);
+
+  useEffect(() => {
+    loadCol('students');
+    loadCol('tests');
+  }, []);
   const [confirmRecord, setConfirmRecord] = useState<TestRecord | null>(null);
   const [editRecord, setEditRecord] = useState<TestRecord | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
@@ -365,25 +393,31 @@ export default function TestsPage() {
   const records = weekRecords.filter(t => filter === 'all' || t.status === filter);
   const filteredStudents = classFilter === '전체' ? state.students : state.students.filter(s => s.classGroup === classFilter);
 
+  const doRefresh = () => setTimeout(refresh, 1500);
+
   const addTest = (t: TestRecord) => {
     dispatch({ type: 'ADD_TEST', payload: t });
     setShowAdd(false);
+    doRefresh();
   };
 
   const confirmTest = (id: string, score: number) => {
     dispatch({ type: 'CONFIRM_TEST', payload: { id, score } });
     setConfirmRecord(null);
+    doRefresh();
   };
 
   const updateTest = (t: TestRecord) => {
     dispatch({ type: 'UPDATE_TEST', payload: t });
     setEditRecord(null);
+    doRefresh();
   };
 
   const deleteTest = (id: string) => {
     if (!confirm('이 시험 기록을 삭제할까요?')) return;
     dispatch({ type: '_SET', payload: { testRecords: state.testRecords.filter(t => t.id !== id) } });
     fbDelete(`lms/tests/${id}`);
+    doRefresh();
   };
 
   const getScoreColor = (score: number | null, max: number) => {
@@ -560,10 +594,6 @@ export default function TestsPage() {
       {detailStudent && (
         <StudentScoreModal
           student={detailStudent}
-          records={state.testRecords.filter(t => t.studentId === detailStudent.id)}
-          onAdd={addTest}
-          onEdit={updateTest}
-          onDelete={deleteTest}
           onClose={() => setDetailStudent(null)}
         />
       )}
