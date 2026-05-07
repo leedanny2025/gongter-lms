@@ -467,8 +467,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       }
     };
 
-    fbGet('lms').then(d => applyData(d, true)).catch(() => setReady(true));
-    connect();
+    // connect() must run after fbGet so SSE doesn't get overwritten by stale Supabase response
+    fbGet('lms').then(d => { applyData(d, true); connect(); }).catch(() => { setReady(true); connect(); });
 
     return () => {
       es?.close();
