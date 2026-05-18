@@ -23,4 +23,6 @@ export const initialData: AppData = {
   weeklyReports: [],
   reports: [],
   currentWeek: getWeekKey(),
+  shopItems: [],
+  purchases: [],
 };

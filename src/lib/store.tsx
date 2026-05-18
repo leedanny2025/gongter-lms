@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState, useRef, useCallback } from 'react';
 import { fbSet, fbDelete, fbGet } from './firebase';
-import { AppData, Student, DollarCondition, DayHomework, TestRecord, AttendanceRecord, AttitudeRecord, MakeupRequest, AttitudeDollarSettings, StudentReport } from './types';
+import { AppData, Student, DollarCondition, DayHomework, TestRecord, AttendanceRecord, AttitudeRecord, MakeupRequest, AttitudeDollarSettings, StudentReport, ShopItem, PurchaseRecord } from './types';
 import { initialData } from './mockData';
 import { sheetsSync } from './sheets';
 import { getWeekKey } from './utils';
@@ -40,6 +40,10 @@ type Action =
   | { type: 'RESET_ATTENDANCE' }
   | { type: 'RESET_ATTITUDE' }
   | { type: 'SAVE_REPORT'; payload: StudentReport }
+  | { type: 'ADD_SHOP_ITEM'; payload: ShopItem }
+  | { type: 'UPDATE_SHOP_ITEM'; payload: ShopItem }
+  | { type: 'DELETE_SHOP_ITEM'; payload: string }
+  | { type: 'ADD_PURCHASE'; payload: PurchaseRecord }
   | { type: '_SET'; payload: Partial<AppData> };
 
 function toArr<T>(val: unknown): T[] {
@@ -96,6 +100,14 @@ function reducer(state: AppData, action: Action): AppData {
     case 'ADD_MAKEUP':    return { ...state, makeupRequests: [...(state.makeupRequests||[]), action.payload] };
     case 'UPDATE_MAKEUP': return { ...state, makeupRequests: (state.makeupRequests||[]).map(m => m.id === action.payload.id ? action.payload : m) };
     case 'AWARD_DOLLARS': return { ...state, students: state.students.map(s => s.id === action.payload.studentId ? { ...s, dollars: Math.max(0, s.dollars + action.payload.amount) } : s) };
+    case 'ADD_SHOP_ITEM':    return { ...state, shopItems: [...(state.shopItems || []), action.payload] };
+    case 'UPDATE_SHOP_ITEM': return { ...state, shopItems: (state.shopItems || []).map(i => i.id === action.payload.id ? action.payload : i) };
+    case 'DELETE_SHOP_ITEM': return { ...state, shopItems: (state.shopItems || []).filter(i => i.id !== action.payload) };
+    case 'ADD_PURCHASE': return {
+      ...state,
+      purchases: [...(state.purchases || []), action.payload],
+      students: state.students.map(s => s.id === action.payload.studentId ? { ...s, dollars: Math.max(0, s.dollars - action.payload.cost) } : s),
+    };
     case 'SET_WEEK': return { ...state, currentWeek: action.payload };
     case 'WEEK_RESET': return {
       ...state,
@@ -242,7 +254,7 @@ function dedupeAttendance(recs: AttendanceRecord[]): AttendanceRecord[] {
 }
 
 // 컬렉션 이름 → Firebase 경로 매핑
-const COLLECTIONS = ['students','homework','attendance','tests','attitude','conditions','settings','makeup','currentWeek','reports'] as const;
+const COLLECTIONS = ['students','homework','attendance','tests','attitude','conditions','settings','makeup','currentWeek','reports','shopItems','purchases'] as const;
 export type ColName = typeof COLLECTIONS[number];
 
 
@@ -270,6 +282,10 @@ function applyCollection(col: ColName, data: unknown, dispatch: React.Dispatch<A
       dispatch({ type: '_SET', payload: { currentWeek: (data as string) || initialData.currentWeek } }); break;
     case 'reports':
       dispatch({ type: '_SET', payload: { reports: toArr<StudentReport>(data) } }); break;
+    case 'shopItems':
+      dispatch({ type: '_SET', payload: { shopItems: toArr<ShopItem>(data) } }); break;
+    case 'purchases':
+      dispatch({ type: '_SET', payload: { purchases: toArr<PurchaseRecord>(data) } }); break;
   }
 }
 
@@ -286,6 +302,8 @@ function applyFirebaseData(data: Record<string, unknown>, dispatch: React.Dispat
     currentWeek:       (data.currentWeek as string | undefined) ?? initialData.currentWeek,
     attitudeDollarSettings: (data.settings as Record<string,unknown>)?.attitudeDollar as AttitudeDollarSettings ?? initialData.attitudeDollarSettings,
     dollarConditions:  fbConditions.length ? fbConditions : initialData.dollarConditions,
+    shopItems:         toArr<ShopItem>(data.shopItems),
+    purchases:         toArr<PurchaseRecord>(data.purchases),
   }});
 }
 
@@ -395,6 +413,17 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       case 'AWARD_DOLLARS': {
         const student = s.students.find(x => x.id === action.payload.studentId);
         if (student) { const u = { ...student, dollars: Math.max(0, student.dollars + action.payload.amount) }; fbSet(`lms/students/${student.id}`, u); sheetsSync.dollar({ studentName: student.name, amount: action.payload.amount, reason: action.payload.reason || '주간 달러 지급', newBalance: u.dollars }); } break;
+      }
+      case 'ADD_SHOP_ITEM':
+      case 'UPDATE_SHOP_ITEM':
+        fbSet(`lms/shopItems/${action.payload.id}`, action.payload); break;
+      case 'DELETE_SHOP_ITEM':
+        fbDelete(`lms/shopItems/${action.payload}`); break;
+      case 'ADD_PURCHASE': {
+        fbSet(`lms/purchases/${action.payload.id}`, action.payload);
+        const buyer = s.students.find(x => x.id === action.payload.studentId);
+        if (buyer) { const u = { ...buyer, dollars: Math.max(0, buyer.dollars - action.payload.cost) }; fbSet(`lms/students/${buyer.id}`, u); }
+        break;
       }
     }
 

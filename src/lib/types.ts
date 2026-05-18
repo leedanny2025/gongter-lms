@@ -128,6 +128,22 @@ export interface AttitudeDollarSettings {
   locked: boolean;
 }
 
+export interface ShopItem {
+  id: string;
+  name: string;
+  cost: number;
+}
+
+export interface PurchaseRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  itemId: string;
+  itemName: string;
+  cost: number;
+  purchasedAt: string;
+}
+
 export interface AppData {
   students: Student[];
   dollarConditions: DollarCondition[];
@@ -140,6 +156,8 @@ export interface AppData {
   weeklyReports: WeeklyReport[];
   reports: StudentReport[];
   currentWeek: string;
+  shopItems: ShopItem[];
+  purchases: PurchaseRecord[];
 }
 
 export interface StudentReport {
