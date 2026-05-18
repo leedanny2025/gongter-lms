@@ -26,6 +26,9 @@ export default function DollarsPage() {
   const [purchaseStudentId, setPurchaseStudentId] = useState<string>('');
   const [purchaseItemId, setPurchaseItemId] = useState<string>('');
   const [purchaseSummary, setPurchaseSummary] = useState<{ name: string; item: string; cost: number } | null>(null);
+  const [purchaseMode, setPurchaseMode] = useState<'list' | 'direct'>('list');
+  const [directItemName, setDirectItemName] = useState('');
+  const [directItemCost, setDirectItemCost] = useState('');
 
   const shopItems: ShopItem[] = state.shopItems || [];
   const purchases = state.purchases || [];
@@ -158,6 +161,32 @@ export default function DollarsPage() {
     setPurchaseSummary({ name: student.name, item: item.name, cost: item.cost });
     setPurchaseStudentId('');
     setPurchaseItemId('');
+  };
+
+  const processDirectPurchase = () => {
+    if (!purchaseStudentId) return alert('학생 선택');
+    const name = directItemName.trim();
+    const cost = Number(directItemCost);
+    if (!name) return alert('상품명 입력');
+    if (!cost || cost <= 0) return alert('가격 입력');
+    const student = state.students.find(s => s.id === purchaseStudentId);
+    if (!student) return;
+    if (student.dollars < cost) return alert(`달러가 부족합니다 (보유: $${student.dollars}, 필요: $${cost})`);
+    dispatch({
+      type: 'ADD_PURCHASE',
+      payload: {
+        id: Date.now().toString(),
+        studentId: student.id,
+        studentName: student.name,
+        itemId: 'direct',
+        itemName: name,
+        cost,
+        purchasedAt: new Date().toISOString(),
+      },
+    });
+    setPurchaseSummary({ name: student.name, item: name, cost });
+    setDirectItemName('');
+    setDirectItemCost('');
   };
 
   return (
@@ -428,12 +457,12 @@ export default function DollarsPage() {
                 <ShoppingCart size={15} /> 구매 처리
               </div>
 
-              {/* 학생 선택 - 이름만 */}
+              {/* 학생 선택 */}
               <div style={{ marginBottom: 12 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>학생 선택</div>
                 <select
                   value={purchaseStudentId}
-                  onChange={e => setPurchaseStudentId(e.target.value)}
+                  onChange={e => { setPurchaseStudentId(e.target.value); setPurchaseSummary(null); }}
                   style={{ width: '100%', fontSize: 14, padding: '8px 12px', borderRadius: 8, border: `1px solid ${purchaseStudentId ? '#0284c7' : '#e2e8f0'}`, background: 'white' }}
                 >
                   <option value="">학생을 선택하세요</option>
@@ -443,40 +472,79 @@ export default function DollarsPage() {
                 </select>
               </div>
 
-              {/* 상품 선택 - 카드 버튼 */}
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>상품 선택</div>
-                {shopItems.length === 0 ? (
-                  <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: '12px 0' }}>등록된 상품이 없습니다</div>
-                ) : (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                    {shopItems.map(item => {
-                      const selected = purchaseItemId === item.id;
-                      return (
-                        <button
-                          key={item.id}
-                          onClick={() => setPurchaseItemId(selected ? '' : item.id)}
-                          style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, border: `2px solid ${selected ? '#0284c7' : '#e2e8f0'}`, background: selected ? '#e0f2fe' : 'white', cursor: 'pointer', textAlign: 'left' }}
-                        >
-                          <span style={{ fontWeight: 600, fontSize: 13, color: selected ? '#0369a1' : '#374151' }}>{item.name}</span>
-                          <span style={{ fontWeight: 800, fontSize: 14, color: selected ? '#0284c7' : '#64748b' }}>${item.cost}</span>
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
+              {/* 구매 방식 탭 */}
+              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: 8, padding: 3, marginBottom: 12 }}>
+                <button
+                  onClick={() => { setPurchaseMode('list'); setPurchaseItemId(''); }}
+                  style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: purchaseMode === 'list' ? 'white' : 'transparent', color: purchaseMode === 'list' ? '#0284c7' : '#64748b', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: purchaseMode === 'list' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}
+                >
+                  상품 목록
+                </button>
+                <button
+                  onClick={() => { setPurchaseMode('direct'); setPurchaseItemId(''); }}
+                  style={{ flex: 1, padding: '6px 0', borderRadius: 6, border: 'none', background: purchaseMode === 'direct' ? 'white' : 'transparent', color: purchaseMode === 'direct' ? '#0284c7' : '#64748b', fontWeight: 700, fontSize: 12, cursor: 'pointer', boxShadow: purchaseMode === 'direct' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}
+                >
+                  직접 입력
+                </button>
               </div>
 
+              {/* 상품 목록 방식 */}
+              {purchaseMode === 'list' && (
+                <div style={{ marginBottom: 12 }}>
+                  {shopItems.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 12, padding: '12px 0' }}>등록된 상품이 없습니다</div>
+                  ) : (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      {shopItems.map(item => {
+                        const selected = purchaseItemId === item.id;
+                        return (
+                          <button
+                            key={item.id}
+                            onClick={() => { setPurchaseItemId(selected ? '' : item.id); setPurchaseSummary(null); }}
+                            style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, border: `2px solid ${selected ? '#0284c7' : '#e2e8f0'}`, background: selected ? '#e0f2fe' : 'white', cursor: 'pointer', textAlign: 'left' }}
+                          >
+                            <span style={{ fontWeight: 600, fontSize: 13, color: selected ? '#0369a1' : '#374151' }}>{item.name}</span>
+                            <span style={{ fontWeight: 800, fontSize: 14, color: selected ? '#0284c7' : '#64748b' }}>${item.cost}</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* 직접 입력 방식 */}
+              {purchaseMode === 'direct' && (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                  <input
+                    value={directItemName}
+                    onChange={e => setDirectItemName(e.target.value)}
+                    placeholder="상품명 입력"
+                    style={{ fontSize: 14, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0' }}
+                  />
+                  <input
+                    type="number"
+                    value={directItemCost}
+                    onChange={e => setDirectItemCost(e.target.value)}
+                    placeholder="달러 가격"
+                    style={{ fontSize: 14, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0' }}
+                  />
+                </div>
+              )}
+
               {/* 구매 미리보기 */}
-              {purchaseStudentId && purchaseItemId && (() => {
+              {purchaseStudentId && (purchaseMode === 'list' ? purchaseItemId : directItemName && directItemCost) && (() => {
                 const student = state.students.find(s => s.id === purchaseStudentId);
-                const item = shopItems.find(i => i.id === purchaseItemId);
-                if (!student || !item) return null;
-                const canAfford = student.dollars >= item.cost;
+                if (!student) return null;
+                const cost = purchaseMode === 'list'
+                  ? (shopItems.find(i => i.id === purchaseItemId)?.cost ?? 0)
+                  : Number(directItemCost);
+                if (!cost) return null;
+                const canAfford = student.dollars >= cost;
                 return (
                   <div style={{ background: canAfford ? '#f0f9ff' : '#fef2f2', borderRadius: 8, padding: '8px 12px', fontSize: 13, border: `1px solid ${canAfford ? '#bae6fd' : '#fecaca'}`, marginBottom: 8 }}>
                     <span style={{ color: canAfford ? '#0369a1' : '#dc2626', fontWeight: 600 }}>
-                      {student.name} · 보유 ${student.dollars} → 구매 후 ${Math.max(0, student.dollars - item.cost)}
+                      {student.name} · 보유 ${student.dollars} → 구매 후 ${Math.max(0, student.dollars - cost)}
                       {!canAfford && ' (잔액 부족)'}
                     </span>
                   </div>
@@ -484,9 +552,9 @@ export default function DollarsPage() {
               })()}
 
               <button
-                onClick={processPurchase}
-                disabled={!purchaseStudentId || !purchaseItemId}
-                style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: purchaseStudentId && purchaseItemId ? 'linear-gradient(135deg, #0284c7, #0369a1)' : '#e2e8f0', color: purchaseStudentId && purchaseItemId ? 'white' : '#94a3b8', cursor: purchaseStudentId && purchaseItemId ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 14 }}
+                onClick={purchaseMode === 'list' ? processPurchase : processDirectPurchase}
+                disabled={!purchaseStudentId || (purchaseMode === 'list' ? !purchaseItemId : !directItemName || !directItemCost)}
+                style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: (purchaseStudentId && (purchaseMode === 'list' ? purchaseItemId : directItemName && directItemCost)) ? 'linear-gradient(135deg, #0284c7, #0369a1)' : '#e2e8f0', color: (purchaseStudentId && (purchaseMode === 'list' ? purchaseItemId : directItemName && directItemCost)) ? 'white' : '#94a3b8', cursor: (purchaseStudentId && (purchaseMode === 'list' ? purchaseItemId : directItemName && directItemCost)) ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 14 }}
               >
                 구매 처리 (달러 차감)
               </button>
