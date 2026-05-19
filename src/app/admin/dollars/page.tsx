@@ -29,9 +29,14 @@ export default function DollarsPage() {
   const [purchaseMode, setPurchaseMode] = useState<'list' | 'direct'>('list');
   const [directItemName, setDirectItemName] = useState('');
   const [directItemCost, setDirectItemCost] = useState('');
+  const [purchasePage, setPurchasePage] = useState(1);
 
+  const PAGE_SIZE = 10;
   const shopItems: ShopItem[] = state.shopItems || [];
   const purchases = state.purchases || [];
+  const sortedPurchases = [...purchases].sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt));
+  const totalPages = Math.max(1, Math.ceil(sortedPurchases.length / PAGE_SIZE));
+  const pagedPurchases = sortedPurchases.slice((purchasePage - 1) * PAGE_SIZE, purchasePage * PAGE_SIZE);
 
   // ── 지급 탭 로직 ──────────────────────────────────────────────
   const enabledConditions = state.dollarConditions.filter(c => c.enabled);
@@ -576,29 +581,80 @@ export default function DollarsPage() {
 
           {/* 우측: 구매 내역 */}
           <div className="card">
-            <div style={{ fontSize: 14, fontWeight: 800, color: '#374151', marginBottom: 14 }}>구매 내역</div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#374151' }}>
+                구매 내역
+                {purchases.length > 0 && <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600, marginLeft: 6 }}>총 {purchases.length}건</span>}
+              </div>
+              {totalPages > 1 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <button
+                    onClick={() => setPurchasePage(p => Math.max(1, p - 1))}
+                    disabled={purchasePage === 1}
+                    style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: purchasePage === 1 ? '#f8fafc' : 'white', color: purchasePage === 1 ? '#cbd5e1' : '#374151', cursor: purchasePage === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >‹</button>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: '#374151', minWidth: 60, textAlign: 'center' }}>
+                    {purchasePage} / {totalPages}
+                  </span>
+                  <button
+                    onClick={() => setPurchasePage(p => Math.min(totalPages, p + 1))}
+                    disabled={purchasePage === totalPages}
+                    style={{ width: 32, height: 32, borderRadius: 8, border: '1px solid #e2e8f0', background: purchasePage === totalPages ? '#f8fafc' : 'white', color: purchasePage === totalPages ? '#cbd5e1' : '#374151', cursor: purchasePage === totalPages ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 16, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                  >›</button>
+                </div>
+              )}
+            </div>
             {purchases.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#94a3b8', fontSize: 14, padding: '40px 0' }}>구매 내역이 없습니다</div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[...purchases].sort((a, b) => b.purchasedAt.localeCompare(a.purchasedAt)).map(p => (
-                  <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                      <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white', flexShrink: 0 }}>
-                        {p.studentName[0]}
+              <>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {pagedPurchases.map(p => (
+                    <div key={p.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: '50%', background: '#0284c7', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 800, color: 'white', flexShrink: 0 }}>
+                          {p.studentName[0]}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: 700, fontSize: 14 }}>{p.studentName}</div>
+                          <div style={{ fontSize: 12, color: '#64748b' }}>{p.itemName}</div>
+                        </div>
                       </div>
-                      <div>
-                        <div style={{ fontWeight: 700, fontSize: 14 }}>{p.studentName}</div>
-                        <div style={{ fontSize: 12, color: '#64748b' }}>{p.itemName}</div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontWeight: 900, fontSize: 16, color: '#dc2626' }}>-${p.cost}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(p.purchasedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
                       </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                      <div style={{ fontWeight: 900, fontSize: 16, color: '#dc2626' }}>-${p.cost}</div>
-                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(p.purchasedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
-                    </div>
+                  ))}
+                </div>
+                {totalPages > 1 && (
+                  <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', gap: 8, marginTop: 16, paddingTop: 14, borderTop: '1px solid #e2e8f0' }}>
+                    <button
+                      onClick={() => setPurchasePage(1)}
+                      disabled={purchasePage === 1}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: purchasePage === 1 ? '#f8fafc' : 'white', color: purchasePage === 1 ? '#cbd5e1' : '#374151', cursor: purchasePage === 1 ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 12 }}
+                    >처음</button>
+                    <button
+                      onClick={() => setPurchasePage(p => Math.max(1, p - 1))}
+                      disabled={purchasePage === 1}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: purchasePage === 1 ? '#f8fafc' : 'white', color: purchasePage === 1 ? '#cbd5e1' : '#374151', cursor: purchasePage === 1 ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 15 }}
+                    >‹ 이전</button>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: '#374151', padding: '6px 12px' }}>
+                      {purchasePage} / {totalPages} 페이지
+                    </span>
+                    <button
+                      onClick={() => setPurchasePage(p => Math.min(totalPages, p + 1))}
+                      disabled={purchasePage === totalPages}
+                      style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #e2e8f0', background: purchasePage === totalPages ? '#f8fafc' : 'white', color: purchasePage === totalPages ? '#cbd5e1' : '#374151', cursor: purchasePage === totalPages ? 'not-allowed' : 'pointer', fontWeight: 700, fontSize: 15 }}
+                    >다음 ›</button>
+                    <button
+                      onClick={() => setPurchasePage(totalPages)}
+                      disabled={purchasePage === totalPages}
+                      style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: purchasePage === totalPages ? '#f8fafc' : 'white', color: purchasePage === totalPages ? '#cbd5e1' : '#374151', cursor: purchasePage === totalPages ? 'not-allowed' : 'pointer', fontWeight: 600, fontSize: 12 }}
+                    >마지막</button>
                   </div>
-                ))}
-              </div>
+                )}
+              </>
             )}
           </div>
         </div>
