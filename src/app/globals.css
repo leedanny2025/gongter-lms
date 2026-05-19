@@ -131,6 +131,19 @@ tr:hover td { background: #f8fafc; }
   .m-col-2 { grid-template-columns: 1fr 1fr !important; }
 }
 
+/* ── Shop layout (달러 구매 탭) ── */
+.shop-layout {
+  display: grid;
+  grid-template-columns: 320px 1fr;
+  gap: 20px;
+  align-items: start;
+}
+@media (max-width: 768px) {
+  .shop-layout {
+    grid-template-columns: 1fr;
+  }
+}
+
 /* ── Mobile nav scrollable ── */
 .mobile-nav-inner {
   display: flex;

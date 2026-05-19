@@ -397,7 +397,7 @@ export default function DollarsPage() {
 
       {/* ── 달러 구매 탭 ── */}
       {tab === 'shop' && (
-        <div style={{ display: 'grid', gridTemplateColumns: '320px 1fr', gap: 20, alignItems: 'start' }}>
+        <div className="shop-layout">
 
           {/* 좌측: 상품 관리 + 구매 처리 */}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
