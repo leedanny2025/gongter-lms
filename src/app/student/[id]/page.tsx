@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import Link from 'next/link';
 import { useStore } from '@/lib/store';
 import { getWeekKey, localDateStr } from '@/lib/utils';
-import { BookOpen, ClipboardCheck, Calendar, CheckCircle, XCircle, Clock, TrendingUp, Award, AlertCircle } from 'lucide-react';
+import { BookOpen, ClipboardCheck, Calendar, CheckCircle, XCircle, Clock, TrendingUp, Award } from 'lucide-react';
 
 export default function StudentDashboard() {
   const params = useParams();
@@ -27,15 +27,42 @@ export default function StudentDashboard() {
     ? Math.round(confirmedTests.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / confirmedTests.length)
     : null;
 
-  // 일일 체크리스트 로직
+  // 오늘 할 일 + 주간 진행 상황
   const dayMap: { [key: string]: number } = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 };
   const scheduledDays = student.scheduleDays || [];
+  const today = new Date();
+  const todayDayNum = today.getDay();
 
-  const getDayTasks = () => {
-    const tasks: Array<{ date: string; day: string; dayName: string; items: Array<{ type: string; label: string; done: boolean; status: string }> }> = [];
-    const today = new Date();
+  // 오늘 할 일
+  const getTodayTasks = () => {
+    const todayScheduled = scheduledDays.find(d => dayMap[d] === todayDayNum);
+    if (!todayScheduled) return null;
+
+    const att = state.attendanceRecords.find(a => a.studentId === id && a.date === todayStr);
+    const hw = state.dayHomeworks.find(h =>
+      h.studentId === id &&
+      h.week === week &&
+      h.day === (todayScheduled as any)
+    );
+    const test = state.testRecords.find(t => t.studentId === id && t.date === todayStr);
+
+    const items = [
+      { type: 'attendance', label: '출석 체크', done: !!att, icon: '📍' },
+      ...(hw ? [{ type: 'homework', label: '숙제 제출', done: hw.status === 'approved', icon: '📝' }] : []),
+      ...(test ? [{ type: 'test', label: '시험 점수', done: test.status === 'confirmed', icon: '📊' }] : []),
+    ];
+
+    return { items, hasIncomplete: items.some(i => !i.done) };
+  };
+
+  const todayTasks = getTodayTasks();
+
+  // 주간 진행 상황
+  const getWeeklyProgress = () => {
     const weekStart = new Date(today);
     weekStart.setDate(today.getDate() - today.getDay());
+
+    const progress: Array<{ date: string; day: string; dayName: string; attendance: boolean; homework: boolean; test: boolean; scheduled: boolean }> = [];
 
     scheduledDays.forEach((scheduledDay: string) => {
       const dayNum = dayMap[scheduledDay] || 0;
@@ -43,34 +70,31 @@ export default function StudentDashboard() {
       taskDate.setDate(weekStart.getDate() + dayNum);
       const dateStr = taskDate.toISOString().split('T')[0];
 
-      // 같은 요일의 출석 기록 조회 (오늘 체크인했는지)
       const att = state.attendanceRecords.find(a => a.studentId === id && a.date === dateStr);
-
-      // 같은 주, 같은 요일의 숙제 조회
       const hw = state.dayHomeworks.find(h =>
         h.studentId === id &&
         h.week === week &&
         h.day === (scheduledDay as any)
       );
-
-      // 같은 날짜의 시험 점수 조회
       const test = state.testRecords.find(t => t.studentId === id && t.date === dateStr);
 
       const dayName = ['일', '월', '화', '수', '목', '금', '토'][taskDate.getDay()];
 
-      const items = [
-        { type: 'attendance', label: '출석 체크', done: !!att, status: att ? `✅ ${att.checkInTime}` : '❌ 미체크' },
-        ...(hw ? [{ type: 'homework', label: '숙제 제출', done: hw.status === 'approved', status: hw.status === 'approved' ? '✅ 승인됨' : hw.status === 'pending' ? '⏳ 대기중' : '❌ 미제출' }] : []),
-        ...(test ? [{ type: 'test', label: '시험 점수', done: test.status === 'confirmed', status: test.status === 'confirmed' ? `✅ ${test.score}점` : '⏳ 대기중' }] : []),
-      ];
-
-      tasks.push({ date: dateStr, day: scheduledDay, dayName, items });
+      progress.push({
+        date: dateStr,
+        day: scheduledDay,
+        dayName,
+        attendance: !!att,
+        homework: hw ? hw.status === 'approved' : false,
+        test: test ? test.status === 'confirmed' : false,
+        scheduled: true,
+      });
     });
 
-    return tasks;
+    return progress;
   };
 
-  const dayTasks = getDayTasks();
+  const weeklyProgress = getWeeklyProgress();
 
   const attDays = weekAttendance.filter(a => a.status !== 'absent').length;
   const approvedHW = weekHomework.filter(h => h.status === 'approved').length;
@@ -92,6 +116,66 @@ export default function StudentDashboard() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {/* 오늘 할 일 */}
+      {todayTasks && (
+        <div style={{ background: todayTasks.hasIncomplete ? 'linear-gradient(135deg, #fee2e2, #fef2f2)' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)', borderRadius: 16, padding: 18, border: `2px solid ${todayTasks.hasIncomplete ? '#fecaca' : '#bbf7d0'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b', marginBottom: 3 }}>오늘 ({new Date().toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })})</div>
+          <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: todayTasks.hasIncomplete ? '#991b1b' : '#15803d' }}>
+            {todayTasks.hasIncomplete ? '✋ 완료할 항목이 있습니다' : '✅ 모두 완료했습니다!'}
+          </h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+            {todayTasks.items.map(item => (
+              <div key={item.type} style={{ background: item.done ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${item.done ? '#86efac' : '#fca5a5'}` }}>
+                <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
+                <div style={{ fontSize: 13, fontWeight: 700, color: item.done ? '#16a34a' : '#dc2626' }}>{item.label}</div>
+                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{item.done ? '완료' : '미완료'}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* 주간 진행 상황 표 */}
+      {weeklyProgress.length > 0 && (
+        <div style={{ background: 'white', borderRadius: 16, padding: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700 }}>주간 진행 상황</h3>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+              <thead>
+                <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ padding: '10px 8px', textAlign: 'left', fontWeight: 700, color: '#64748b' }}>요일</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>📍 출석</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>📝 숙제</th>
+                  <th style={{ padding: '10px 8px', textAlign: 'center', fontWeight: 700, color: '#64748b' }}>📊 시험</th>
+                </tr>
+              </thead>
+              <tbody>
+                {weeklyProgress.map((day, idx) => (
+                  <tr key={day.date} style={{ borderBottom: idx < weeklyProgress.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                    <td style={{ padding: '12px 8px', fontWeight: 600, color: '#374151' }}>{day.dayName}요일</td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                      <span style={{ display: 'inline-block', width: 28, height: 28, borderRadius: 8, background: day.attendance ? '#dcfce7' : '#f1f5f9', color: day.attendance ? '#16a34a' : '#cbd5e1', fontWeight: 700, lineHeight: '28px' }}>
+                        {day.attendance ? '✓' : '-'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                      <span style={{ display: 'inline-block', width: 28, height: 28, borderRadius: 8, background: day.homework ? '#dcfce7' : '#f1f5f9', color: day.homework ? '#16a34a' : '#cbd5e1', fontWeight: 700, lineHeight: '28px' }}>
+                        {day.homework ? '✓' : '-'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 8px', textAlign: 'center' }}>
+                      <span style={{ display: 'inline-block', width: 28, height: 28, borderRadius: 8, background: day.test ? '#dcfce7' : '#f1f5f9', color: day.test ? '#16a34a' : '#cbd5e1', fontWeight: 700, lineHeight: '28px' }}>
+                        {day.test ? '✓' : '-'}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
       {/* 달러 카드 */}
       <div style={{ background: 'linear-gradient(135deg, #7c3aed, #4f46e5)', borderRadius: 20, padding: 22, color: 'white', boxShadow: '0 8px 24px rgba(99,102,241,0.35)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
@@ -115,51 +199,6 @@ export default function StudentDashboard() {
           </div>
         </div>
       </div>
-
-      {/* 일일 체크리스트 */}
-      {dayTasks.length > 0 && (
-        <div style={{ background: 'white', borderRadius: 20, padding: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <h3 style={{ margin: '0 0 14px', fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
-            <Calendar size={18} color="#6366f1" />
-            수업별 할 일
-          </h3>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {dayTasks.map((dayTask) => {
-              const hasIncomplete = dayTask.items.some(item => !item.done);
-              return (
-                <div key={dayTask.date} style={{ background: hasIncomplete ? '#fef2f2' : '#f0fdf4', border: `2px solid ${hasIncomplete ? '#fecaca' : '#bbf7d0'}`, borderRadius: 14, padding: 14 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
-                    <div style={{ fontWeight: 700, fontSize: 16, color: hasIncomplete ? '#dc2626' : '#15803d' }}>
-                      {dayTask.dayName}요일 {dayTask.date}
-                    </div>
-                    {hasIncomplete && (
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 4, padding: '4px 10px', background: '#fee2e2', borderRadius: 8, fontSize: 11, fontWeight: 700, color: '#dc2626' }}>
-                        <AlertCircle size={12} />
-                        미완료
-                      </div>
-                    )}
-                  </div>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                    {dayTask.items.map((item) => (
-                      <div key={item.type} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px', background: item.done ? '#f0fdf4' : '#fef2f2', borderRadius: 10, border: `1px solid ${item.done ? '#bbf7d0' : '#fecaca'}` }}>
-                        {item.done ? (
-                          <CheckCircle size={16} color="#16a34a" />
-                        ) : (
-                          <XCircle size={16} color="#dc2626" />
-                        )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontWeight: 600, fontSize: 12, color: item.done ? '#15803d' : '#991b1b' }}>{item.label}</div>
-                          <div style={{ fontSize: 11, color: '#64748b', marginTop: 1 }}>{item.status}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      )}
 
       {/* 이번 주 달러 조건 */}
       <div style={{ background: 'white', borderRadius: 20, padding: 18, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
