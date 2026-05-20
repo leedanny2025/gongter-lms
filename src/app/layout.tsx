@@ -5,6 +5,11 @@ import { StoreProvider } from "@/lib/store";
 export const metadata: Metadata = {
   title: "공터 영어 학원 - 학습 관리 시스템",
   description: "공터 영어 학원 학습 관리 시스템",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'default',
+    title: '공터 LMS',
+  },
 };
 
 export const viewport: Viewport = {
