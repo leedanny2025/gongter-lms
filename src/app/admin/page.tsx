@@ -359,12 +359,35 @@ export default function AdminDashboard() {
         <WeekSelector week={week} onChange={handleWeekChange} />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
-        <StatCard title="전체 학생" value={state.students.length} sub="등록된 학생 수" icon={Users} color="#3b82f6" />
-        <StatCard title="오늘 출석" value={todayAtt.length} sub={`/ ${state.students.length}명`} icon={Calendar} color="#22c55e" />
-        <StatCard title="승인 대기" value={pendingHW + pendingTests} sub={`숙제 ${pendingHW} / 시험 ${pendingTests}`} icon={Clock} color="#f59e0b" href="/admin/homework" />
-        <StatCard title="총 달러" value={`$${totalDollars}`} sub="전체 지급 누계" icon={DollarSign} color="#8b5cf6" />
-      </div>
+      {(() => {
+        const studentsNeedingMakeup = state.students.filter(s =>
+          state.attendanceRecords.some(a => a.studentId === s.id && a.status === 'absent')
+        ).length;
+        const makeupCompleted = state.students.filter(s => {
+          const requiredHours = s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length * 2);
+          const completedHours = (state.makeupRequests || [])
+            .filter(m => m.studentId === s.id && m.status === 'approved')
+            .reduce((sum, m) => {
+              const timeMatch = m.makeupTime.match(/^(\d{1,2}):(\d{2})/);
+              if (!timeMatch) return sum;
+              const hours = parseInt(timeMatch[1]) || 0;
+              const minutes = parseInt(timeMatch[2]) || 0;
+              return sum + hours + (minutes > 30 ? 1 : 0);
+            }, 0);
+          return completedHours >= requiredHours && requiredHours > 0;
+        }).length;
+
+        return (
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
+            <StatCard title="전체 학생" value={state.students.length} sub="등록된 학생 수" icon={Users} color="#3b82f6" />
+            <StatCard title="오늘 출석" value={todayAtt.length} sub={`/ ${state.students.length}명`} icon={Calendar} color="#22c55e" />
+            <StatCard title="승인 대기" value={pendingHW + pendingTests} sub={`숙제 ${pendingHW} / 시험 ${pendingTests}`} icon={Clock} color="#f59e0b" href="/admin/homework" />
+            <StatCard title="총 달러" value={`$${totalDollars}`} sub="전체 지급 누계" icon={DollarSign} color="#8b5cf6" />
+            <StatCard title="보충 필요" value={studentsNeedingMakeup} sub="명의 학생" icon={Clock} color="#ef4444" />
+            <StatCard title="보충 완료" value={makeupCompleted} sub={`/ ${studentsNeedingMakeup}명`} icon={CheckCircle} color="#22c55e" />
+          </div>
+        );
+      })()}
 
       {(() => {
         const unregisteredCount = state.students.filter(s => {
