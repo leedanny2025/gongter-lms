@@ -247,6 +247,8 @@ export default function AdminDashboard() {
       return acc;
     }, {} as Record<string, number>)
   );
+  const [makeupHoursEditMode, setMakeupHoursEditMode] = useState<Record<string, boolean>>({});
+  const [makeupHoursSaved, setMakeupHoursSaved] = useState<Record<string, boolean>>({});
   const [makeupEditPopup, setMakeupEditPopup] = useState<{ req: typeof state.makeupRequests[0] } | null>(null);
   const [makeupEditStatus, setMakeupEditStatus] = useState<'completed' | 'partial' | 'postponed' | 'cancelled'>('completed');
   const [makeupEditCompletedHours, setMakeupEditCompletedHours] = useState<string>('');
@@ -740,19 +742,38 @@ export default function AdminDashboard() {
                     <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: 4, marginBottom: 6, alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc' }}>
                       <div style={{ ...NAME_CELL, fontWeight: 600 }}>{s.name}</div>
                       <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{absentDays}일</div>
-                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700 }}>
-                        <input
-                          type="number"
-                          value={requiredHours}
-                          onChange={e => {
-                            const newHours = Math.max(0, Number(e.target.value) || 0);
-                            setMakeupHours(prev => ({ ...prev, [s.id]: newHours }));
-                            dispatch({ type: 'UPDATE_STUDENT', payload: { ...s, makeupHoursRequired: newHours } });
-                          }}
-                          min="0"
-                          style={{ width: 45, fontSize: 12, padding: '4px 6px', textAlign: 'center', borderRadius: 6, border: '1px solid #e2e8f0' }}
-                        />
-                        시간
+                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+                        {makeupHoursEditMode[s.id] ? (
+                          <>
+                            <input
+                              type="number"
+                              value={requiredHours}
+                              onChange={e => {
+                                const newHours = Math.max(0, Number(e.target.value) || 0);
+                                setMakeupHours(prev => ({ ...prev, [s.id]: newHours }));
+                              }}
+                              min="0"
+                              autoFocus
+                              style={{ width: 40, fontSize: 12, padding: '4px 6px', textAlign: 'center', borderRadius: 6, border: '2px solid #6366f1', fontWeight: 700 }}
+                            />
+                            <button onClick={() => {
+                              dispatch({ type: 'UPDATE_STUDENT', payload: { ...s, makeupHoursRequired: requiredHours } });
+                              setMakeupHoursEditMode(prev => ({ ...prev, [s.id]: false }));
+                              setMakeupHoursSaved(prev => ({ ...prev, [s.id]: true }));
+                              setTimeout(() => setMakeupHoursSaved(prev => ({ ...prev, [s.id]: false })), 2000);
+                            }} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#22c55e', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>✓</button>
+                            <button onClick={() => {
+                              setMakeupHours(prev => ({ ...prev, [s.id]: s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length * 2) }));
+                              setMakeupHoursEditMode(prev => ({ ...prev, [s.id]: false }));
+                            }} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#e2e8f0', color: '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>✕</button>
+                          </>
+                        ) : (
+                          <>
+                            {requiredHours}시간
+                            <button onClick={() => setMakeupHoursEditMode(prev => ({ ...prev, [s.id]: true }))} style={{ padding: '2px 6px', borderRadius: 4, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', fontWeight: 600, fontSize: 10, marginLeft: 2 }}>수정</button>
+                            {makeupHoursSaved[s.id] && <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 12 }}>✓</span>}
+                          </>
+                        )}
                       </div>
                       <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
                         {completedHours}시간
