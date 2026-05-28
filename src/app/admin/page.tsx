@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { Users, DollarSign, BookOpen, ClipboardCheck, Calendar, TrendingUp, Clock, X } from 'lucide-react';
+import { Users, DollarSign, BookOpen, ClipboardCheck, Calendar, TrendingUp, Clock, X, CheckCircle } from 'lucide-react';
 import { TestRecord, DayHomework, AttendanceRecord, HomeworkDay } from '@/lib/types';
 import WeekSelector from '@/components/WeekSelector';
 import { localDateStr, getWeekDateRange } from '@/lib/utils';
