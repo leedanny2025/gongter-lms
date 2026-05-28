@@ -74,6 +74,10 @@ export interface MakeupRequest {
   reason?: string;
   status: 'pending' | 'approved' | 'rejected';
   approvedAt?: string;
+  completedHours?: number;
+  completionStatus?: 'completed' | 'partial' | 'postponed' | 'cancelled';
+  cancellationReason?: string;
+  remainingHours?: number;
 }
 
 export interface AttendanceRecord {

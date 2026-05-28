@@ -247,6 +247,11 @@ export default function AdminDashboard() {
       return acc;
     }, {} as Record<string, number>)
   );
+  const [makeupEditPopup, setMakeupEditPopup] = useState<{ req: typeof state.makeupRequests[0] } | null>(null);
+  const [makeupEditStatus, setMakeupEditStatus] = useState<'completed' | 'partial' | 'postponed' | 'cancelled'>('completed');
+  const [makeupEditCompletedHours, setMakeupEditCompletedHours] = useState<string>('');
+  const [makeupEditRemainingHours, setMakeupEditRemainingHours] = useState<string>('');
+  const [makeupEditReason, setMakeupEditReason] = useState<string>('');
 
   const handleWeekChange = (w: string) => {
     setWeek(w);
@@ -765,25 +770,33 @@ export default function AdminDashboard() {
                   {(state.makeupRequests || []).length === 0 ? (
                     <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: 12 }}>등록된 보충 요청이 없습니다</div>
                   ) : (
-                    <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 100px 100px 1fr', gap: 4, marginBottom: 8, alignItems: 'center' }}>
+                    <div style={{ display: 'grid', gridTemplateColumns: '70px 70px 90px 70px 70px 70px 40px', gap: 4, marginBottom: 8, alignItems: 'center' }}>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>학생</div>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>요청일</div>
                       <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>보충날짜</div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>시간</div>
-                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>상태</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>시간</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>부족</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>완료</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>액션</div>
                     </div>
                   )}
-                  {(state.makeupRequests || []).map(req => (
-                    <div key={req.id} style={{ display: 'grid', gridTemplateColumns: '80px 80px 100px 100px 1fr', gap: 4, marginBottom: 4, alignItems: 'center', padding: '6px 8px', borderRadius: 6, background: '#fafbfc', fontSize: 11 }}>
-                      <div style={{ fontWeight: 600, color: '#374151' }}>{req.studentName}</div>
-                      <div style={{ color: '#64748b' }}>{req.requestedAt.slice(5, 10)}</div>
-                      <div style={{ color: '#64748b' }}>{req.makeupDate}</div>
-                      <div style={{ color: '#64748b' }}>{req.makeupTime}</div>
-                      <div style={{ textAlign: 'center', fontWeight: 700, color: req.status === 'approved' ? '#22c55e' : req.status === 'pending' ? '#f59e0b' : '#ef4444' }}>
-                        {req.status === 'approved' ? '✅' : req.status === 'pending' ? '⏳' : '❌'}
+                  {(state.makeupRequests || []).map(req => {
+                    const student = state.students.find(s => s.id === req.studentId);
+                    const requiredHours = student?.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === req.studentId && a.status === 'absent').length * 2);
+                    return (
+                      <div key={req.id} style={{ display: 'grid', gridTemplateColumns: '70px 70px 90px 70px 70px 70px 40px', gap: 4, marginBottom: 4, alignItems: 'center', padding: '6px 8px', borderRadius: 6, background: '#fafbfc', fontSize: 11 }}>
+                        <div style={{ fontWeight: 600, color: '#374151' }}>{req.studentName}</div>
+                        <div style={{ color: '#64748b', fontSize: 10 }}>{req.requestedAt.slice(5, 10)}</div>
+                        <div style={{ color: '#64748b', fontSize: 10 }}>{req.makeupDate}</div>
+                        <div style={{ color: '#64748b', textAlign: 'center', fontSize: 10 }}>{req.makeupTime}</div>
+                        <div style={{ textAlign: 'center', fontWeight: 700, color: '#ef4444', fontSize: 10 }}>{requiredHours - (req.completedHours || 0)}시간</div>
+                        <div style={{ textAlign: 'center', fontWeight: 700, color: '#22c55e', fontSize: 10 }}>{req.completedHours || 0}시간</div>
+                        <div style={{ display: 'flex', gap: 3, justifyContent: 'center' }}>
+                          <button onClick={() => { setMakeupEditPopup({ req }); setMakeupEditStatus(req.completionStatus || 'completed'); setMakeupEditCompletedHours(req.completedHours?.toString() || ''); setMakeupEditRemainingHours(req.remainingHours?.toString() || ''); setMakeupEditReason(req.cancellationReason || ''); }} style={{ padding: '3px 6px', borderRadius: 4, border: 'none', background: '#e0f2fe', color: '#0369a1', cursor: 'pointer', fontWeight: 600, fontSize: 9 }}>수정</button>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </>
             );
@@ -935,6 +948,75 @@ export default function AdminDashboard() {
           }}
           onDelete={id => dispatch({ type: 'DELETE_ATTENDANCE', payload: id })}
         />
+      )}
+
+      {makeupEditPopup && (
+        <div onMouseDown={() => setMakeupEditPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onMouseDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>보충 요청 상세</h3>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{makeupEditPopup.req.studentName} · {makeupEditPopup.req.makeupDate}</div>
+              </div>
+              <button onClick={() => setMakeupEditPopup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} color="#94a3b8" /></button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+                {(['completed', 'partial', 'postponed', 'cancelled'] as const).map(s => (
+                  <button key={s} onClick={() => setMakeupEditStatus(s)} style={{
+                    padding: '10px 0', borderRadius: 10, border: '2px solid',
+                    borderColor: makeupEditStatus === s ? { completed: '#22c55e', partial: '#f59e0b', postponed: '#94a3b8', cancelled: '#ef4444' }[s] : '#e2e8f0',
+                    background: makeupEditStatus === s ? { completed: '#d1fae5', partial: '#fef3c7', postponed: '#f1f5f9', cancelled: '#fee2e2' }[s] : 'white',
+                    cursor: 'pointer', fontWeight: 700, fontSize: 12,
+                    color: { completed: '#22c55e', partial: '#f59e0b', postponed: '#64748b', cancelled: '#ef4444' }[s]
+                  }}>{{ completed: '완료', partial: '부분', postponed: '연기', cancelled: '취소' }[s]}</button>
+                ))}
+              </div>
+
+              {makeupEditStatus === 'completed' && (
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>완료 시간 (시간)</label>
+                  <input type="number" value={makeupEditCompletedHours} onChange={e => setMakeupEditCompletedHours(e.target.value)} placeholder="0" min="0" style={{ fontSize: 16, fontWeight: 700, textAlign: 'center', padding: '8px', width: '100%', boxSizing: 'border-box', borderRadius: 10 }} />
+                </div>
+              )}
+
+              {makeupEditStatus === 'partial' && (
+                <>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>완료한 시간 (시간)</label>
+                    <input type="number" value={makeupEditCompletedHours} onChange={e => setMakeupEditCompletedHours(e.target.value)} placeholder="0" min="0" style={{ fontSize: 16, fontWeight: 700, textAlign: 'center', padding: '8px', width: '100%', boxSizing: 'border-box', borderRadius: 10 }} />
+                  </div>
+                  <div>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>남은 시간 (시간)</label>
+                    <input type="number" value={makeupEditRemainingHours} onChange={e => setMakeupEditRemainingHours(e.target.value)} placeholder="0" min="0" style={{ fontSize: 16, fontWeight: 700, textAlign: 'center', padding: '8px', width: '100%', boxSizing: 'border-box', borderRadius: 10 }} />
+                  </div>
+                </>
+              )}
+
+              {(makeupEditStatus === 'postponed' || makeupEditStatus === 'cancelled') && (
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>사유 (선택)</label>
+                  <input type="text" value={makeupEditReason} onChange={e => setMakeupEditReason(e.target.value)} placeholder={makeupEditStatus === 'postponed' ? '연기 사유' : '취소 사유'} style={{ fontSize: 13, padding: '8px 10px', width: '100%', boxSizing: 'border-box', borderRadius: 10 }} />
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button onClick={() => {
+                if (confirm('정말 삭제하시겠습니까?')) {
+                  dispatch({ type: 'DELETE_MAKEUP', payload: makeupEditPopup.req.id });
+                  setMakeupEditPopup(null);
+                }
+              }} style={{ padding: '10px 12px', borderRadius: 10, border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>삭제</button>
+              <button onClick={() => setMakeupEditPopup(null)} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#64748b' }}>취소</button>
+              <button onClick={() => {
+                dispatch({ type: 'UPDATE_MAKEUP', payload: { ...makeupEditPopup.req, completedHours: Number(makeupEditCompletedHours) || 0, completionStatus: makeupEditStatus, remainingHours: Number(makeupEditRemainingHours) || 0, cancellationReason: makeupEditReason || undefined } });
+                setMakeupEditPopup(null);
+              }} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>저장</button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

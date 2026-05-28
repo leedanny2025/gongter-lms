@@ -35,6 +35,7 @@ type Action =
   | { type: 'DELETE_ATTITUDE'; payload: string }
   | { type: 'ADD_MAKEUP'; payload: MakeupRequest }
   | { type: 'UPDATE_MAKEUP'; payload: MakeupRequest }
+  | { type: 'DELETE_MAKEUP'; payload: string }
   | { type: 'SET_WEEK'; payload: string }
   | { type: 'WEEK_RESET'; payload: string }
   | { type: 'RESET_ATTENDANCE' }
@@ -99,6 +100,7 @@ function reducer(state: AppData, action: Action): AppData {
     case 'DELETE_ATTITUDE': return { ...state, attitudeRecords: (state.attitudeRecords||[]).filter(a => a.id !== action.payload) };
     case 'ADD_MAKEUP':    return { ...state, makeupRequests: [...(state.makeupRequests||[]), action.payload] };
     case 'UPDATE_MAKEUP': return { ...state, makeupRequests: (state.makeupRequests||[]).map(m => m.id === action.payload.id ? action.payload : m) };
+    case 'DELETE_MAKEUP': return { ...state, makeupRequests: (state.makeupRequests||[]).filter(m => m.id !== action.payload) };
     case 'AWARD_DOLLARS': return { ...state, students: state.students.map(s => s.id === action.payload.studentId ? { ...s, dollars: Math.max(0, s.dollars + action.payload.amount) } : s) };
     case 'ADD_SHOP_ITEM':    return { ...state, shopItems: [...(state.shopItems || []), action.payload] };
     case 'UPDATE_SHOP_ITEM': return { ...state, shopItems: (state.shopItems || []).map(i => i.id === action.payload.id ? action.payload : i) };
