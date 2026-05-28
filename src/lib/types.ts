@@ -12,6 +12,7 @@ export interface Student {
   scheduleDays?: string[];
   scheduleTimes?: Record<string, string>;
   scheduleTime?: string;
+  makeupHoursRequired?: number;
 }
 
 export interface DollarCondition {

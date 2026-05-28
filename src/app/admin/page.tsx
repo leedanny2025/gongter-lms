@@ -241,6 +241,12 @@ export default function AdminDashboard() {
   const [testEditSubject, setTestEditSubject] = useState('');
   const [testEditMax, setTestEditMax] = useState('');
   const [testEditDate, setTestEditDate] = useState('');
+  const [makeupHours, setMakeupHours] = useState<Record<string, number>>(
+    state.students.reduce((acc, s) => {
+      acc[s.id] = s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length * 2);
+      return acc;
+    }, {} as Record<string, number>)
+  );
 
   const handleWeekChange = (w: string) => {
     setWeek(w);
@@ -248,6 +254,57 @@ export default function AdminDashboard() {
   };
 
   const todayStr = localDateStr();
+
+  const markAbsentAtTime = (targetHour: number = 19) => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    const currentMinute = now.getMinutes();
+
+    if (currentHour < targetHour) {
+      alert(`아직 ${targetHour}시가 아닙니다. (현재 ${currentHour}:${String(currentMinute).padStart(2, '0')})`);
+      return;
+    }
+
+    let marked = 0;
+    state.students.forEach(s => {
+      const hasAttendanceToday = state.attendanceRecords.some(a => a.studentId === s.id && a.date === todayStr);
+      if (!hasAttendanceToday) {
+        const isScheduledToday = !s.scheduleDays || s.scheduleDays.length === 0 ||
+          s.scheduleDays.includes(['mon', 'tue', 'wed', 'thu', 'fri'][new Date(todayStr + 'T12:00:00').getDay() - 1] ?? '');
+        if (isScheduledToday) {
+          dispatch({
+            type: 'ADD_ATTENDANCE',
+            payload: {
+              id: `a${Date.now()}_${s.id}`,
+              studentId: s.id,
+              studentName: s.name,
+              classGroup: s.classGroup,
+              date: todayStr,
+              checkInTime: '',
+              status: 'absent',
+              reason: '등록되지 않음 (자동 결석)',
+            }
+          });
+          marked++;
+        }
+      }
+    });
+
+    if (marked > 0) {
+      alert(`${marked}명의 학생을 결석 처리했습니다.`);
+      // 자동으로 보충 시간 설정
+      state.students.forEach(s => {
+        const absentCount = (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length) +
+                           (state.attendanceRecords.find(a => a.studentId === s.id && a.date === todayStr && a.status === 'absent') ? 1 : 0);
+        const requiredHours = absentCount * 2;
+        if (!s.makeupHoursRequired || s.makeupHoursRequired < requiredHours) {
+          dispatch({ type: 'UPDATE_STUDENT', payload: { ...s, makeupHoursRequired: requiredHours } });
+        }
+      });
+    } else {
+      alert('오늘 미등록 학생이 없습니다.');
+    }
+  };
 
   // 이번 주 Mon–Fri 날짜 계산
   const { start: weekStart } = getWeekDateRange(week);
@@ -308,6 +365,26 @@ export default function AdminDashboard() {
         <StatCard title="승인 대기" value={pendingHW + pendingTests} sub={`숙제 ${pendingHW} / 시험 ${pendingTests}`} icon={Clock} color="#f59e0b" href="/admin/homework" />
         <StatCard title="총 달러" value={`$${totalDollars}`} sub="전체 지급 누계" icon={DollarSign} color="#8b5cf6" />
       </div>
+
+      {(() => {
+        const unregisteredCount = state.students.filter(s => {
+          const hasAttendance = state.attendanceRecords.some(a => a.studentId === s.id && a.date === todayStr);
+          return !hasAttendance && (!s.scheduleDays || s.scheduleDays.length === 0 ||
+            s.scheduleDays.includes(['mon', 'tue', 'wed', 'thu', 'fri'][new Date(todayStr + 'T12:00:00').getDay() - 1] ?? ''));
+        }).length;
+
+        return unregisteredCount > 0 ? (
+          <div style={{ background: '#fef2f2', border: '2px solid #fee2e2', borderRadius: 12, padding: 14, marginBottom: 16, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#7f1d1d' }}>오늘 {unregisteredCount}명 미등록</div>
+              <div style={{ fontSize: 12, color: '#991b1b', marginTop: 2 }}>오후 7시에 자동 결석 처리됩니다</div>
+            </div>
+            <button onClick={() => markAbsentAtTime(19)} style={{ padding: '10px 16px', borderRadius: 10, border: 'none', background: '#ef4444', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}>
+              지금 결석 처리
+            </button>
+          </div>
+        ) : null;
+      })()}
 
       <div className="m-col-1" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
 
@@ -578,6 +655,112 @@ export default function AdminDashboard() {
                   {bonusConditions.length > 0 && (
                     <span style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>⭐ 보너스: {bonusConditions.map(c => c.name).join(' · ')}</span>
                   )}
+                </div>
+              </>
+            );
+          })()}
+        </div>
+
+        {/* ── 보충 현황 ── */}
+        <div className="card" style={{ gridColumn: '1 / -1' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+            <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+              <Clock size={16} color="#d97706" /> 보충 현황
+            </h3>
+          </div>
+
+          {(() => {
+            const studentAbsentDays: Record<string, number> = {};
+            state.students.forEach(s => {
+              const absentCount = state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length;
+              if (absentCount > 0) {
+                studentAbsentDays[s.id] = absentCount;
+              }
+            });
+
+            const studentsNeedingMakeup = state.students.filter(s => studentAbsentDays[s.id] > 0);
+
+            if (studentsNeedingMakeup.length === 0) {
+              return <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 20 }}>보충이 필요한 학생이 없습니다</div>;
+            }
+
+            return (
+              <>
+                {/* 학생별 보충 현황 */}
+                <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: 4, marginBottom: 10, alignItems: 'center' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>학생</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>결석</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>필요시간</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>완료시간</div>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>상태</div>
+                </div>
+
+                {studentsNeedingMakeup.map(s => {
+                  const absentDays = studentAbsentDays[s.id] || 0;
+                  const requiredHours = makeupHours[s.id] || 0;
+                  const completedHours = (state.makeupRequests || [])
+                    .filter(m => m.studentId === s.id && m.status === 'approved')
+                    .reduce((sum, m) => {
+                      const timeMatch = m.makeupTime.match(/^(\d{1,2}):(\d{2})/);
+                      if (!timeMatch) return sum;
+                      const hours = parseInt(timeMatch[1]) || 0;
+                      const minutes = parseInt(timeMatch[2]) || 0;
+                      return sum + hours + (minutes > 30 ? 1 : 0);
+                    }, 0);
+
+                  return (
+                    <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: 4, marginBottom: 6, alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc' }}>
+                      <div style={{ ...NAME_CELL, fontWeight: 600 }}>{s.name}</div>
+                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{absentDays}일</div>
+                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700 }}>
+                        <input
+                          type="number"
+                          value={requiredHours}
+                          onChange={e => {
+                            const newHours = Math.max(0, Number(e.target.value) || 0);
+                            setMakeupHours(prev => ({ ...prev, [s.id]: newHours }));
+                            dispatch({ type: 'UPDATE_STUDENT', payload: { ...s, makeupHoursRequired: newHours } });
+                          }}
+                          min="0"
+                          style={{ width: 45, fontSize: 12, padding: '4px 6px', textAlign: 'center', borderRadius: 6, border: '1px solid #e2e8f0' }}
+                        />
+                        시간
+                      </div>
+                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
+                        {completedHours}시간
+                      </div>
+                      <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
+                        {completedHours >= requiredHours ? '✅ 완료' : `⏳ ${requiredHours - completedHours}시간`}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* 보충 요청 현황 */}
+                <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f1f5f9' }}>
+                  <h4 style={{ margin: '0 0 10px', fontSize: 13, fontWeight: 700, color: '#374151' }}>등록된 보충 요청</h4>
+                  {(state.makeupRequests || []).length === 0 ? (
+                    <div style={{ color: '#94a3b8', fontSize: 12, textAlign: 'center', padding: 12 }}>등록된 보충 요청이 없습니다</div>
+                  ) : (
+                    <div style={{ display: 'grid', gridTemplateColumns: '80px 80px 100px 100px 1fr', gap: 4, marginBottom: 8, alignItems: 'center' }}>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>학생</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>요청일</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>보충날짜</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>시간</div>
+                      <div style={{ fontSize: 10, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>상태</div>
+                    </div>
+                  )}
+                  {(state.makeupRequests || []).map(req => (
+                    <div key={req.id} style={{ display: 'grid', gridTemplateColumns: '80px 80px 100px 100px 1fr', gap: 4, marginBottom: 4, alignItems: 'center', padding: '6px 8px', borderRadius: 6, background: '#fafbfc', fontSize: 11 }}>
+                      <div style={{ fontWeight: 600, color: '#374151' }}>{req.studentName}</div>
+                      <div style={{ color: '#64748b' }}>{req.requestedAt.slice(5, 10)}</div>
+                      <div style={{ color: '#64748b' }}>{req.makeupDate}</div>
+                      <div style={{ color: '#64748b' }}>{req.makeupTime}</div>
+                      <div style={{ textAlign: 'center', fontWeight: 700, color: req.status === 'approved' ? '#22c55e' : req.status === 'pending' ? '#f59e0b' : '#ef4444' }}>
+                        {req.status === 'approved' ? '✅' : req.status === 'pending' ? '⏳' : '❌'}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </>
             );
