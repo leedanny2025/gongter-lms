@@ -97,14 +97,31 @@ function CheckInContent() {
       });
     } else {
       // checkout
-      if (!alreadyChecked) return;
-      dispatch({
-        type: 'UPDATE_ATTENDANCE',
-        payload: {
-          ...alreadyChecked,
-          checkOutTime: actualTime,
-        },
-      });
+      if (alreadyChecked) {
+        // 입실이 있으면 UPDATE
+        dispatch({
+          type: 'UPDATE_ATTENDANCE',
+          payload: {
+            ...alreadyChecked,
+            checkOutTime: actualTime,
+          },
+        });
+      } else {
+        // 입실이 없으면 새로 ADD (퇴실만)
+        dispatch({
+          type: 'ADD_ATTENDANCE',
+          payload: {
+            id: `a${Date.now()}`,
+            studentId: selectedStudent.id,
+            studentName: selectedStudent.name,
+            classGroup: selectedStudent.classGroup,
+            date: actualDate,
+            checkInTime: '',
+            checkOutTime: actualTime,
+            status: 'present',
+          },
+        });
+      }
     }
     setRegisteredTime(actualTime);
     setStep('done');
@@ -269,7 +286,7 @@ function CheckInContent() {
                 <>
                   <CheckCircle size={28} color="#0369a1" style={{ display: 'block', margin: '0 auto 8px' }} />
                   <div style={{ fontWeight: 700, fontSize: 15, color: '#0369a1' }}>
-                    {alreadyChecked ? '퇴실 처리됩니다' : '먼저 입실해주세요'}
+                    퇴실 처리됩니다
                   </div>
                 </>
               )}
@@ -282,11 +299,10 @@ function CheckInContent() {
               </button>
               <button
                 onClick={confirmCheckIn}
-                disabled={checkType === 'checkout' && !alreadyChecked}
                 style={{
                   flex: 2, padding: '12px', borderRadius: 10, border: 'none',
-                  background: (checkType === 'checkout' && !alreadyChecked) ? '#e2e8f0' : (checkType === 'checkin' ? (isLate ? '#f59e0b' : '#22c55e') : '#0ea5e9'),
-                  color: 'white', cursor: (checkType === 'checkout' && !alreadyChecked) ? 'default' : 'pointer',
+                  background: checkType === 'checkin' ? (isLate ? '#f59e0b' : '#22c55e') : '#0ea5e9',
+                  color: 'white', cursor: 'pointer',
                   fontWeight: 800, fontSize: 15
                 }}
               >
