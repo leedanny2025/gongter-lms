@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { Users, DollarSign, BookOpen, ClipboardCheck, Calendar, TrendingUp, Clock, X, CheckCircle } from 'lucide-react';
 import { TestRecord, DayHomework, AttendanceRecord, HomeworkDay } from '@/lib/types';
@@ -203,9 +203,9 @@ function AttDashModal({ rec, studentId, studentName, classGroup, date, onClose, 
   );
 }
 
-function StatCard({ title, value, sub, icon: Icon, color, href }: { title: string; value: string | number; sub: string; icon: React.ElementType; color: string; href?: string }) {
+function StatCard({ title, value, sub, icon: Icon, color, href, onClick }: { title: string; value: string | number; sub: string; icon: React.ElementType; color: string; href?: string; onClick?: () => void }) {
   const inner = (
-    <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 16, cursor: href ? 'pointer' : undefined, transition: href ? 'box-shadow 0.15s' : undefined }}>
+    <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 16, cursor: href || onClick ? 'pointer' : undefined, transition: (href || onClick) ? 'box-shadow 0.15s' : undefined }} onClick={onClick}>
       <div style={{ background: color + '20', borderRadius: 10, padding: 10, flexShrink: 0 }}>
         <Icon size={20} color={color} />
       </div>
@@ -249,6 +249,7 @@ export default function AdminDashboard() {
   );
   const [makeupHoursEditMode, setMakeupHoursEditMode] = useState<Record<string, boolean>>({});
   const [makeupHoursSaved, setMakeupHoursSaved] = useState<Record<string, boolean>>({});
+  const makeupSectionRef = useRef<HTMLDivElement>(null);
   const [makeupEditPopup, setMakeupEditPopup] = useState<{ req: typeof state.makeupRequests[0] } | null>(null);
   const [makeupEditStatus, setMakeupEditStatus] = useState<'completed' | 'partial' | 'postponed' | 'cancelled'>('completed');
   const [makeupEditCompletedHours, setMakeupEditCompletedHours] = useState<string>('');
@@ -390,8 +391,8 @@ export default function AdminDashboard() {
             <StatCard title="오늘 출석" value={todayAtt.length} sub={`/ ${state.students.length}명`} icon={Calendar} color="#22c55e" />
             <StatCard title="승인 대기" value={pendingHW + pendingTests} sub={`숙제 ${pendingHW} / 시험 ${pendingTests}`} icon={Clock} color="#f59e0b" href="/admin/homework" />
             <StatCard title="총 달러" value={`$${totalDollars}`} sub="전체 지급 누계" icon={DollarSign} color="#8b5cf6" />
-            <StatCard title="보충 필요" value={studentsNeedingMakeup} sub="명의 학생" icon={Clock} color="#ef4444" />
-            <StatCard title="보충 완료" value={makeupCompleted} sub={`/ ${studentsNeedingMakeup}명`} icon={CheckCircle} color="#22c55e" />
+            <StatCard title="보충 필요" value={studentsNeedingMakeup} sub="명의 학생" icon={Clock} color="#ef4444" onClick={() => makeupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
+            <StatCard title="보충 완료" value={makeupCompleted} sub={`/ ${studentsNeedingMakeup}명`} icon={CheckCircle} color="#22c55e" onClick={() => makeupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
           </div>
         );
       })()}
@@ -692,7 +693,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* ── 보충 현황 ── */}
-        <div className="card" style={{ gridColumn: '1 / -1' }}>
+        <div className="card" style={{ gridColumn: '1 / -1' }} ref={makeupSectionRef}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
             <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
               <Clock size={16} color="#d97706" /> 보충 현황
