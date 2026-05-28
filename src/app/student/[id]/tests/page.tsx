@@ -125,21 +125,21 @@ export default function StudentTestPage() {
 
         {/* STEP: form */}
         {step === 'form' && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>시험 요일</label>
-              <div style={{ display: 'flex', gap: 6 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>요일</label>
+              <div style={{ display: 'flex', gap: 4 }}>
                 {DAY_ORDER.map(day => (
                   <button
                     key={day}
                     type="button"
                     onClick={() => setSelectedDay(day)}
                     style={{
-                      flex: 1, padding: '10px 0', borderRadius: 10, border: '1.5px solid',
+                      flex: 1, padding: '8px 0', borderRadius: 8, border: '1px solid',
                       borderColor: selectedDay === day ? '#6366f1' : '#e2e8f0',
                       background: selectedDay === day ? '#eff0ff' : 'white',
                       color: selectedDay === day ? '#6366f1' : '#94a3b8',
-                      fontWeight: selectedDay === day ? 700 : 400, fontSize: 15, cursor: 'pointer',
+                      fontWeight: selectedDay === day ? 700 : 400, fontSize: 13, cursor: 'pointer',
                       minHeight: 'unset',
                     }}
                   >
@@ -149,78 +149,58 @@ export default function StudentTestPage() {
               </div>
             </div>
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>시험 과목</label>
-              <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="시험명 입력" style={{ borderRadius: 10 }} />
+              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>과목</label>
+              <input value={subject} onChange={e => setSubject(e.target.value)} placeholder="시험명" style={{ borderRadius: 8, fontSize: 14, padding: '8px 10px' }} />
             </div>
 
-            {/* 입력 방법 선택 */}
             <div>
-              <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>점수 입력 방법</label>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>입력</label>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
                 <button onClick={() => setInputMethod('direct')} style={{
-                  padding: 16, borderRadius: 12, border: '2px solid',
+                  padding: 12, borderRadius: 10, border: '1.5px solid',
                   borderColor: inputMethod === 'direct' ? '#6366f1' : '#e2e8f0',
                   background: inputMethod === 'direct' ? '#eff0ff' : '#f8fafc',
                   cursor: 'pointer', textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: 24, marginBottom: 6 }}>✏️</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: inputMethod === 'direct' ? '#4338ca' : '#374151' }}>직접 입력</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>점수를 직접 입력</div>
+                  <div style={{ fontSize: 20, marginBottom: 4 }}>✏️</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: inputMethod === 'direct' ? '#4338ca' : '#374151' }}>직접</div>
                 </button>
                 <button onClick={() => setInputMethod('photo')} style={{
-                  padding: 16, borderRadius: 12, border: '2px solid',
+                  padding: 12, borderRadius: 10, border: '1.5px solid',
                   borderColor: inputMethod === 'photo' ? '#6366f1' : '#e2e8f0',
                   background: inputMethod === 'photo' ? '#eff0ff' : '#f8fafc',
                   cursor: 'pointer', textAlign: 'center',
                 }}>
-                  <div style={{ fontSize: 24, marginBottom: 6 }}>📸</div>
-                  <div style={{ fontWeight: 700, fontSize: 14, color: inputMethod === 'photo' ? '#4338ca' : '#374151' }}>사진 찍기</div>
-                  <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>시험지 촬영 → 자동 추출</div>
+                  <div style={{ fontSize: 20, marginBottom: 4 }}>📸</div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: inputMethod === 'photo' ? '#4338ca' : '#374151' }}>사진</div>
                 </button>
               </div>
             </div>
 
             {inputMethod === 'direct' && (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>만점 점수</label>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <input
-                      type="number"
-                      value={maxScore}
-                      onChange={e => setMaxScore(Math.max(1, Number(e.target.value) || 20))}
-                      placeholder="20"
-                      style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', flex: 1, borderRadius: 12, border: '2px solid #6366f1', padding: '12px 14px', background: 'white', cursor: 'text', pointerEvents: 'auto' }}
-                      min="1"
-                    />
-                    <span style={{ fontSize: 16, fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>개</span>
-                  </div>
-                </div>
-                <div>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>점수 입력</label>
-                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, display: 'block', marginBottom: 6 }}>점수</label>
+                  <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
                     <input
                       type="number" value={score} onChange={e => setScore(e.target.value)}
                       placeholder="0"
-                      style={{ fontSize: 28, fontWeight: 800, textAlign: 'center', flex: 1, borderRadius: 12 }}
+                      style={{ fontSize: 24, fontWeight: 800, textAlign: 'center', flex: 1, borderRadius: 10, padding: '8px' }}
                       min="0" max={maxScore}
                     />
-                    <div style={{ fontSize: 18, fontWeight: 600, color: '#94a3b8' }}>/</div>
+                    <div style={{ fontSize: 16, fontWeight: 600, color: '#94a3b8' }}>/</div>
                     <input
                       type="number"
                       value={maxScore}
                       onChange={e => setMaxScore(Math.max(1, Number(e.target.value) || 20))}
                       placeholder="20"
-                      style={{ fontSize: 28, fontWeight: 800, textAlign: 'center', width: 80, borderRadius: 12, border: '2px solid #6366f1', padding: '8px 10px', background: 'white', cursor: 'text', pointerEvents: 'auto' }}
+                      style={{ fontSize: 24, fontWeight: 800, textAlign: 'center', width: 70, borderRadius: 10, border: '1.5px solid #6366f1', padding: '8px 6px', background: 'white', cursor: 'text', pointerEvents: 'auto' }}
                       min="1"
                     />
-                    <span style={{ fontSize: 18, fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>개</span>
                   </div>
                   {score && (
-                    <div style={{ marginTop: 10, textAlign: 'center', padding: '10px', background: '#f8fafc', borderRadius: 10 }}>
-                      <span style={{ fontSize: 15, fontWeight: 700, color: gradeColor((Number(score) / maxScore) * 100) }}>
-                        {Math.round((Number(score) / maxScore) * 100)}% · 등급 {gradeLabel((Number(score) / maxScore) * 100)}
-                      </span>
+                    <div style={{ marginTop: 8, textAlign: 'center', padding: '8px', background: '#f8fafc', borderRadius: 8, fontSize: 13, fontWeight: 700, color: gradeColor((Number(score) / maxScore) * 100) }}>
+                      {Math.round((Number(score) / maxScore) * 100)}% · {gradeLabel((Number(score) / maxScore) * 100)}
                     </div>
                   )}
                 </div>

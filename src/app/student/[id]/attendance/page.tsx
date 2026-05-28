@@ -132,54 +132,52 @@ export default function StudentAttendancePage() {
                 </div>
               </>
             ) : (
-              <div style={{ background: '#f5f3ff', borderRadius: 14, padding: 20, border: '2px solid #6366f1' }}>
-                <div style={{ fontSize: 15, fontWeight: 700, color: '#4338ca', marginBottom: 16 }}>출석 정보 기입</div>
+              <div style={{ background: '#f5f3ff', borderRadius: 14, padding: 14, border: '2px solid #6366f1' }}>
+                <div style={{ fontSize: 14, fontWeight: 700, color: '#4338ca', marginBottom: 12 }}>출석 정보</div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>입실 시간</label>
+                <div style={{ marginBottom: 10, display: 'flex', gap: 8 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', minWidth: 50 }}>입실</label>
                   <input
                     type="time"
                     value={checkInTime}
                     onChange={e => setCheckInTime(e.target.value)}
                     style={{
-                      width: '100%', padding: '12px', borderRadius: 10, border: '1.5px solid #c7d2fe',
-                      fontSize: 16, fontWeight: 600, outline: 'none'
+                      flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #c7d2fe',
+                      fontSize: 14, fontWeight: 600, outline: 'none'
                     }}
                   />
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>퇴실 시간 <span style={{ color: '#94a3b8', fontWeight: 400 }}>(선택)</span></label>
-                  <div style={{ display: 'flex', gap: 8 }}>
-                    <input
-                      type="time"
-                      value={checkOutTime}
-                      onChange={e => setCheckOutTime(e.target.value)}
-                      style={{
-                        flex: 1, padding: '12px', borderRadius: 10, border: '1.5px solid #c7d2fe',
-                        fontSize: 16, fontWeight: 600, outline: 'none'
-                      }}
-                    />
-                    <button
-                      onClick={() => {
-                        const now = new Date();
-                        const pad = (n: number) => String(n).padStart(2, '0');
-                        setCheckOutTime(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
-                      }}
-                      style={{
-                        padding: '12px 16px', borderRadius: 10, border: 'none',
-                        background: '#f0f9ff', color: '#0369a1', cursor: 'pointer',
-                        fontWeight: 600, fontSize: 13, whiteSpace: 'nowrap',
-                      }}
-                    >
-                      지금
-                    </button>
-                  </div>
+                <div style={{ marginBottom: 10, display: 'flex', gap: 8 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', minWidth: 50 }}>퇴실</label>
+                  <input
+                    type="time"
+                    value={checkOutTime}
+                    onChange={e => setCheckOutTime(e.target.value)}
+                    style={{
+                      flex: 1, padding: '8px', borderRadius: 8, border: '1px solid #c7d2fe',
+                      fontSize: 14, fontWeight: 600, outline: 'none'
+                    }}
+                  />
+                  <button
+                    onClick={() => {
+                      const now = new Date();
+                      const pad = (n: number) => String(n).padStart(2, '0');
+                      setCheckOutTime(`${pad(now.getHours())}:${pad(now.getMinutes())}`);
+                    }}
+                    style={{
+                      padding: '8px 12px', borderRadius: 8, border: 'none',
+                      background: '#f0f9ff', color: '#0369a1', cursor: 'pointer',
+                      fontWeight: 600, fontSize: 12, whiteSpace: 'nowrap',
+                    }}
+                  >
+                    지금
+                  </button>
                 </div>
 
-                <div style={{ marginBottom: 16 }}>
-                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>출석 상태</label>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
+                <div style={{ marginBottom: 12, display: 'flex', gap: 8 }}>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', minWidth: 50 }}>상태</label>
+                  <div style={{ display: 'flex', gap: 6, flex: 1 }}>
                     {[
                       { value: 'present', label: '출석', color: '#22c55e' },
                       { value: 'late', label: '지각', color: '#f59e0b' },
@@ -189,11 +187,11 @@ export default function StudentAttendancePage() {
                         key={s.value}
                         onClick={() => setStatus(s.value as any)}
                         style={{
-                          padding: '12px', borderRadius: 10, border: `2px solid ${status === s.value ? s.color : '#e2e8f0'}`,
-                          background: status === s.value ? `${s.color}20` : 'white',
+                          flex: 1, padding: '8px', borderRadius: 8, border: `1.5px solid ${status === s.value ? s.color : '#e2e8f0'}`,
+                          background: status === s.value ? `${s.color}15` : 'white',
                           color: status === s.value ? s.color : '#94a3b8',
                           fontWeight: status === s.value ? 700 : 500,
-                          cursor: 'pointer',
+                          cursor: 'pointer', fontSize: 13,
                           minHeight: 'unset',
                         }}
                       >
@@ -203,7 +201,7 @@ export default function StudentAttendancePage() {
                   </div>
                 </div>
 
-                <div style={{ display: 'flex', gap: 10 }}>
+                <div style={{ display: 'flex', gap: 8 }}>
                   <button
                     onClick={() => {
                       setInputMode(false);
@@ -212,9 +210,9 @@ export default function StudentAttendancePage() {
                       setStatus('present');
                     }}
                     style={{
-                      flex: 1, padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0',
+                      flex: 1, padding: '10px', borderRadius: 8, border: '1px solid #e2e8f0',
                       background: 'white', color: '#374151', cursor: 'pointer', fontWeight: 600,
-                      minHeight: 'unset',
+                      fontSize: 13, minHeight: 'unset',
                     }}
                   >
                     취소
@@ -245,10 +243,10 @@ export default function StudentAttendancePage() {
                       setStatus('present');
                     }}
                     style={{
-                      flex: 2, padding: '12px', borderRadius: 10, border: 'none',
+                      flex: 2, padding: '10px', borderRadius: 8, border: 'none',
                       background: 'linear-gradient(135deg, #6366f1, #4f46e5)',
-                      color: 'white', cursor: 'pointer', fontWeight: 700, display: 'flex',
-                      alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 'unset',
+                      color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 'unset',
                     }}
                   >
                     <Check size={18} /> 제출
