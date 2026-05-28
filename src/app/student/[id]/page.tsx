@@ -139,12 +139,12 @@ export default function StudentDashboard() {
               <Link href={`/student/${id}/attendance`} style={{ background: todayTasks.attendance ? '#d1fae5' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.attendance ? '#86efac' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
                 <div style={{ fontSize: 18, marginBottom: 4 }}>🚪</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.attendance ? '#16a34a' : '#64748b' }}>입실</div>
-                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.attendance ? '완료' : '미완료'}</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.attendance ? '✅ 완료' : '❌ 미완료'}</div>
               </Link>
-              <Link href={`/student/${id}/attendance`} style={{ background: '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid #cbd5e1', textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <Link href={`/student/${id}/attendance`} style={{ background: todayTasks.attendance?.checkOutTime ? '#d1fae5' : todayTasks.attendance ? '#fef3c7' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.attendance?.checkOutTime ? '#86efac' : todayTasks.attendance ? '#fbbf24' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
                 <div style={{ fontSize: 18, marginBottom: 4 }}>🚪</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>퇴실</div>
-                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>확인 필요</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.attendance?.checkOutTime ? '#16a34a' : todayTasks.attendance ? '#d97706' : '#64748b' }}>퇴실</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.attendance?.checkOutTime ? '✅ 완료' : todayTasks.attendance ? '⏳ 대기' : '❌ 미완료'}</div>
               </Link>
             </div>
           </div>
@@ -156,12 +156,12 @@ export default function StudentDashboard() {
               <Link href={`/student/${id}/homework`} style={{ background: todayTasks.homework ? '#eff0ff' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.homework ? '#c7d2fe' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
                 <div style={{ fontSize: 18, marginBottom: 4 }}>✏️</div>
                 <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.homework ? '#6366f1' : '#64748b' }}>기입</div>
-                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.homework ? '입력됨' : '미입력'}</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.homework ? '✅ 입력됨' : '❌ 미입력'}</div>
               </Link>
-              <Link href={`/student/${id}/homework`} style={{ background: todayTasks.homework?.status === 'approved' ? '#d1fae5' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.homework?.status === 'approved' ? '#86efac' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
-                <div style={{ fontSize: 18, marginBottom: 4 }}>✅</div>
-                <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.homework?.status === 'approved' ? '#16a34a' : '#64748b' }}>완료 제출</div>
-                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.homework?.status === 'approved' ? '완료' : '미제출'}</div>
+              <Link href={`/student/${id}/homework`} style={{ background: todayTasks.homework?.status === 'approved' ? '#d1fae5' : todayTasks.homework?.status === 'pending' ? '#fef3c7' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.homework?.status === 'approved' ? '#86efac' : todayTasks.homework?.status === 'pending' ? '#fbbf24' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>📬</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.homework?.status === 'approved' ? '#16a34a' : todayTasks.homework?.status === 'pending' ? '#d97706' : '#64748b' }}>제출</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.homework?.status === 'approved' ? '✅ 완료' : todayTasks.homework?.status === 'pending' ? '⏳ 대기' : '❌ 미제출'}</div>
               </Link>
             </div>
           </div>
@@ -169,10 +169,10 @@ export default function StudentDashboard() {
           {/* 시험 파트 */}
           <div style={{ background: 'white', borderRadius: 16, padding: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
             <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: '#374151' }}>📊 시험 점수</div>
-            <Link href={`/student/${id}/tests`} style={{ background: todayTasks.test?.status === 'confirmed' ? '#d1fae5' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.test?.status === 'confirmed' ? '#86efac' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+            <Link href={`/student/${id}/tests`} style={{ background: todayTasks.test?.status === 'confirmed' ? '#d1fae5' : todayTasks.test?.status === 'pending' ? '#fef3c7' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.test?.status === 'confirmed' ? '#86efac' : todayTasks.test?.status === 'pending' ? '#fbbf24' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
               <div style={{ fontSize: 24, marginBottom: 4 }}>🎯</div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.test?.status === 'confirmed' ? '#16a34a' : '#64748b' }}>점수 입력</div>
-              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.test?.status === 'confirmed' ? `${todayTasks.test.score}/${todayTasks.test.maxScore}` : '미입력'}</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.test?.status === 'confirmed' ? '#16a34a' : todayTasks.test?.status === 'pending' ? '#d97706' : '#64748b' }}>점수 입력</div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.test?.status === 'confirmed' ? `✅ ${todayTasks.test.score}/${todayTasks.test.maxScore}` : todayTasks.test?.status === 'pending' ? `⏳ 확정 대기` : '❌ 미입력'}</div>
             </Link>
           </div>
         </div>
