@@ -21,7 +21,7 @@ export default function StudentTestPage() {
 
   const [step, setStep] = useState<SubmitStep>('form');
   const [subject, setSubject] = useState('영어 어휘 테스트');
-  const MAX_SCORE = 20;
+  const [maxScore, setMaxScore] = useState(20);
   const [score, setScore] = useState('');
   const [selectedDay, setSelectedDay] = useState<string>(DAY_ORDER[new Date().getDay() - 1] || 'mon');
   const [extractedScore, setExtractedScore] = useState<number | null>(null);
@@ -53,7 +53,7 @@ export default function StudentTestPage() {
       studentName: student?.name || '',
       subject,
       score: finalScore,
-      maxScore: MAX_SCORE,
+      maxScore: maxScore,
       imageUrl: imagePreview || undefined,
       submittedByStudent: true,
       status: 'pending',
@@ -181,38 +181,78 @@ export default function StudentTestPage() {
             </div>
 
             {inputMethod === 'direct' && (
-              <div>
-                <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>맞힌 개수 입력 (20개 만점)</label>
-                <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                  <input
-                    type="number" value={score} onChange={e => setScore(e.target.value)}
-                    placeholder="맞힌 개수"
-                    style={{ fontSize: 28, fontWeight: 800, textAlign: 'center', flex: 1, borderRadius: 12 }}
-                    min="0" max="20"
-                  />
-                  <div style={{ color: '#94a3b8', fontSize: 18, whiteSpace: 'nowrap' }}>/ 20개</div>
-                </div>
-                {score && (
-                  <div style={{ marginTop: 10, textAlign: 'center', padding: '10px', background: '#f8fafc', borderRadius: 10 }}>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: gradeColor((Number(score) / MAX_SCORE) * 100) }}>
-                      {Math.round((Number(score) / MAX_SCORE) * 100)}% · 등급 {gradeLabel((Number(score) / MAX_SCORE) * 100)}
-                    </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>만점 점수</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="number"
+                      value={maxScore}
+                      onChange={e => setMaxScore(Math.max(1, Number(e.target.value) || 20))}
+                      placeholder="20"
+                      style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', flex: 1, borderRadius: 12, border: '2px solid #6366f1', padding: '12px 14px', background: 'white', cursor: 'text', pointerEvents: 'auto' }}
+                      min="1"
+                    />
+                    <span style={{ fontSize: 16, fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>개</span>
                   </div>
-                )}
+                </div>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>점수 입력</label>
+                  <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                    <input
+                      type="number" value={score} onChange={e => setScore(e.target.value)}
+                      placeholder="0"
+                      style={{ fontSize: 28, fontWeight: 800, textAlign: 'center', flex: 1, borderRadius: 12 }}
+                      min="0" max={maxScore}
+                    />
+                    <div style={{ fontSize: 18, fontWeight: 600, color: '#94a3b8' }}>/</div>
+                    <input
+                      type="number"
+                      value={maxScore}
+                      onChange={e => setMaxScore(Math.max(1, Number(e.target.value) || 20))}
+                      placeholder="20"
+                      style={{ fontSize: 28, fontWeight: 800, textAlign: 'center', width: 80, borderRadius: 12, border: '2px solid #6366f1', padding: '8px 10px', background: 'white', cursor: 'text', pointerEvents: 'auto' }}
+                      min="1"
+                    />
+                    <span style={{ fontSize: 18, fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>개</span>
+                  </div>
+                  {score && (
+                    <div style={{ marginTop: 10, textAlign: 'center', padding: '10px', background: '#f8fafc', borderRadius: 10 }}>
+                      <span style={{ fontSize: 15, fontWeight: 700, color: gradeColor((Number(score) / maxScore) * 100) }}>
+                        {Math.round((Number(score) / maxScore) * 100)}% · 등급 {gradeLabel((Number(score) / maxScore) * 100)}
+                      </span>
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
             {inputMethod === 'photo' && (
-              <div>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  accept="image/*"
-                  capture="environment"
-                  style={{ display: 'none' }}
-                  onChange={e => e.target.files?.[0] && handlePhoto(e.target.files[0])}
-                />
-                <div
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+                <div>
+                  <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>만점 점수</label>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <input
+                      type="number"
+                      value={maxScore}
+                      onChange={e => setMaxScore(Math.max(1, Number(e.target.value) || 20))}
+                      placeholder="20"
+                      style={{ fontSize: 18, fontWeight: 700, textAlign: 'center', flex: 1, borderRadius: 12, border: '2px solid #6366f1', padding: '12px 14px', background: 'white', cursor: 'text', pointerEvents: 'auto' }}
+                      min="1"
+                    />
+                    <span style={{ fontSize: 16, fontWeight: 600, color: '#94a3b8', whiteSpace: 'nowrap' }}>개</span>
+                  </div>
+                </div>
+                <div>
+                  <input
+                    type="file"
+                    ref={fileInputRef}
+                    accept="image/*"
+                    capture="environment"
+                    style={{ display: 'none' }}
+                    onChange={e => e.target.files?.[0] && handlePhoto(e.target.files[0])}
+                  />
+                  <div
                   onClick={() => fileInputRef.current?.click()}
                   style={{
                     border: '2px dashed #6366f1', borderRadius: 14, padding: 32, textAlign: 'center',
@@ -224,13 +264,14 @@ export default function StudentTestPage() {
                   <div style={{ fontSize: 12, color: '#94a3b8' }}>카메라로 찍거나 갤러리에서 선택하세요</div>
                   <div style={{ fontSize: 11, color: '#a5b4fc', marginTop: 6 }}>📸 점수가 자동으로 인식됩니다</div>
                 </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1px solid #6366f1', background: 'white', color: '#6366f1', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <Camera size={16} /> 카메라
-                  </button>
-                  <button onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#374151', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
-                    <Upload size={16} /> 갤러리
-                  </button>
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1px solid #6366f1', background: 'white', color: '#6366f1', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <Camera size={16} /> 카메라
+                    </button>
+                    <button onClick={() => fileInputRef.current?.click()} style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', background: '#f8fafc', color: '#374151', cursor: 'pointer', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+                      <Upload size={16} /> 갤러리
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -279,12 +320,33 @@ export default function StudentTestPage() {
               </div>
             )}
 
-            <div style={{ background: '#f0fdf4', borderRadius: 12, padding: 16, marginBottom: 16, textAlign: 'center' }}>
-              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 6 }}>인식된 점수</div>
-              <div style={{ fontSize: 48, fontWeight: 900, color: gradeColor((extractedScore! / MAX_SCORE) * 100), lineHeight: 1 }}>
-                {extractedScore}
+            <div style={{ background: '#f0fdf4', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+              <div style={{ fontSize: 12, color: '#64748b', marginBottom: 10 }}>인식된 점수</div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12 }}>
+                <div style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 48, fontWeight: 900, color: gradeColor((extractedScore! / maxScore) * 100), lineHeight: 1 }}>
+                    {extractedScore}
+                  </div>
+                </div>
+                <div style={{ fontSize: 24, color: '#94a3b8' }}>/</div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}>
+                  <input
+                    type="number"
+                    value={maxScore}
+                    onChange={e => setMaxScore(Math.max(1, Number(e.target.value) || 20))}
+                    style={{ fontSize: 20, fontWeight: 700, textAlign: 'center', width: 80, borderRadius: 10, border: '2px solid #86efac', padding: '8px 10px', background: 'white', cursor: 'text', pointerEvents: 'auto' }}
+                    min="1"
+                  />
+                  <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>개</span>
+                </div>
               </div>
-              <div style={{ fontSize: 14, color: '#94a3b8', marginTop: 4 }}>/ {MAX_SCORE}개</div>
+              {extractedScore !== null && (
+                <div style={{ marginTop: 12, textAlign: 'center', padding: '8px', background: 'white', borderRadius: 8 }}>
+                  <span style={{ fontSize: 15, fontWeight: 700, color: gradeColor((extractedScore / maxScore) * 100) }}>
+                    {Math.round((extractedScore / maxScore) * 100)}% · 등급 {gradeLabel((extractedScore / maxScore) * 100)}
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ background: '#fffbeb', borderRadius: 10, padding: 12, marginBottom: 16, display: 'flex', gap: 8, alignItems: 'center' }}>

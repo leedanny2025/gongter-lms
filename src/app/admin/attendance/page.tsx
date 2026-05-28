@@ -31,7 +31,7 @@ function EditModal({ record, onSave, onClose, onDelete }: { record: AttendanceRe
             <input type="time" value={checkIn} onChange={e => setCheckIn(e.target.value)} />
           </div>
           <div>
-            <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>퇴실 시간</label>
+            <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>퇴실 시간 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(선택)</span></label>
             <div style={{ display: 'flex', gap: 8 }}>
               <input type="time" value={checkOut} onChange={e => setCheckOut(e.target.value)} style={{ flex: 1 }} />
               <button
@@ -87,7 +87,7 @@ function EditModal({ record, onSave, onClose, onDelete }: { record: AttendanceRe
           <button onClick={() => { if (confirm(`${record.studentName}의 출석 기록을 삭제할까요?`)) onDelete(); }}
             style={{ padding: '12px 14px', borderRadius: 10, border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>삭제</button>
           <button className="btn btn-outline" style={{ flex: 1 }} onClick={onClose}>취소</button>
-          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onSave({ ...record, checkInTime: checkIn, checkOutTime: checkOut || undefined, status, reason: (status === 'late' || status === 'absent') && reason ? reason : undefined })}>저장</button>
+          <button className="btn btn-primary" style={{ flex: 1 }} onClick={() => onSave({ ...record, checkInTime: status === 'absent' ? '' : checkIn, checkOutTime: checkOut || undefined, status, reason: (status === 'late' || status === 'absent') && reason ? reason : undefined })}>저장</button>
         </div>
       </div>
     </div>
@@ -113,7 +113,7 @@ function AddModal({ onSave, onClose }: { onSave: (r: AttendanceRecord) => void; 
   const save = () => {
     const s = state.students.find(x => x.id === studentId);
     if (!s) return alert('학생 선택');
-    onSave({ id: `a${Date.now()}`, studentId, studentName: s.name, classGroup: s.classGroup, date, checkInTime: time, checkOutTime: checkOut || undefined, status, reason: (status === 'late' || status === 'absent') && reason ? reason : undefined });
+    onSave({ id: `a${Date.now()}`, studentId, studentName: s.name, classGroup: s.classGroup, date, checkInTime: status === 'absent' ? '' : time, checkOutTime: checkOut || undefined, status, reason: (status === 'late' || status === 'absent') && reason ? reason : undefined });
   };
 
   return (
@@ -143,7 +143,25 @@ function AddModal({ onSave, onClose }: { onSave: (r: AttendanceRecord) => void; 
           </div>
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 6 }}>퇴실 시간 <span style={{ fontWeight: 400, color: '#94a3b8' }}>(선택)</span></label>
-            <input type="time" value={checkOut} onChange={e => setCheckOut(e.target.value)} />
+            <div style={{ display: 'flex', gap: 8 }}>
+              <input type="time" value={checkOut} onChange={e => setCheckOut(e.target.value)} style={{ flex: 1 }} />
+              <button
+                type="button"
+                onClick={() => setCheckOut(new Date().toTimeString().slice(0, 5))}
+                style={{ padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}
+              >
+                지금
+              </button>
+              {checkOut && (
+                <button
+                  type="button"
+                  onClick={() => setCheckOut('')}
+                  style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', fontSize: 12, color: '#ef4444' }}
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
           <div>
             <label style={{ fontSize: 13, fontWeight: 600, display: 'block', marginBottom: 8 }}>상태</label>
@@ -225,6 +243,7 @@ function WeeklyView() {
   const { state, dispatch } = useStore();
   const [week, setWeek] = useState(getWeekKey());
   const { start, label } = getWeekDateRange(week);
+  const todayStr = localDateStr();
 
   const weekDates = DAY_ORDER.map((day, i) => {
     const d = new Date(start);
@@ -235,9 +254,9 @@ function WeeklyView() {
   const quickSet = (student: { id: string; name: string; classGroup: string }, date: string, status: 'present' | 'late' | 'absent') => {
     const exists = state.attendanceRecords.find(a => a.studentId === student.id && a.date === date);
     if (exists) {
-      dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...exists, status } });
+      dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...exists, status, checkInTime: status === 'absent' ? '' : (exists.checkInTime || localTime()) } });
     } else {
-      dispatch({ type: 'ADD_ATTENDANCE', payload: { id: `a${Date.now()}`, studentId: student.id, studentName: student.name, classGroup: student.classGroup, date, checkInTime: localTime(), status } });
+      dispatch({ type: 'ADD_ATTENDANCE', payload: { id: `a${Date.now()}`, studentId: student.id, studentName: student.name, classGroup: student.classGroup, date, checkInTime: status === 'absent' ? '' : localTime(), status } });
     }
   };
 
@@ -319,7 +338,8 @@ function WeeklyView() {
                       );
                     }
 
-                    const cell = rec ? STATUS_CELL[rec.status] : { text: '결', bg: '#fee2e2', color: '#991b1b' };
+                    const isPast = date < todayStr;
+                    const cell = rec ? STATUS_CELL[rec.status] : isPast ? { text: '결', bg: '#fee2e2', color: '#991b1b' } : { text: '', bg: '#f8fafc', color: '#cbd5e1' };
                     const nextStatus = cycleStatus(rec?.status);
 
                     return (
@@ -402,7 +422,7 @@ export default function AttendancePage() {
   const [showAdd, setShowAdd] = useState(false);
   const [showQR, setShowQR] = useState(false);
   const [editRecord, setEditRecord] = useState<AttendanceRecord | null>(null);
-  const [checkoutEdit, setCheckoutEdit] = useState<{ studentId: string; time: string } | null>(null);
+  const [timeEdit, setTimeEdit] = useState<{ studentId: string; checkIn: string; checkOut: string } | null>(null);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -435,21 +455,21 @@ export default function AttendancePage() {
     setShowAdd(false);
   };
 
-  const saveCheckout = (studentId: string) => {
-    if (!checkoutEdit || checkoutEdit.studentId !== studentId) return;
+  const saveTime = (studentId: string) => {
+    if (!timeEdit || timeEdit.studentId !== studentId) return;
     const rec = state.attendanceRecords.find(a => a.studentId === studentId && a.date === selectedDate);
     if (!rec) return;
-    dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...rec, checkOutTime: checkoutEdit.time } });
-    setCheckoutEdit(null);
+    dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...rec, checkInTime: rec.status === 'absent' ? '' : timeEdit.checkIn, checkOutTime: timeEdit.checkOut || undefined } });
+    setTimeEdit(null);
   };
 
   const quickSet = (student: { id: string; name: string; classGroup: string }, status: 'present' | 'late' | 'absent') => {
     const exists = state.attendanceRecords.find(a => a.studentId === student.id && a.date === selectedDate);
     const now = localTime();
     if (exists) {
-      dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...exists, status, checkInTime: exists.checkInTime || now } });
+      dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...exists, status, checkInTime: status === 'absent' ? '' : (exists.checkInTime || now) } });
     } else {
-      dispatch({ type: 'ADD_ATTENDANCE', payload: { id: `a${Date.now()}`, studentId: student.id, studentName: student.name, classGroup: student.classGroup, date: selectedDate, checkInTime: now, status } });
+      dispatch({ type: 'ADD_ATTENDANCE', payload: { id: `a${Date.now()}`, studentId: student.id, studentName: student.name, classGroup: student.classGroup, date: selectedDate, checkInTime: status === 'absent' ? '' : now, status } });
     }
   };
 
@@ -572,41 +592,90 @@ export default function AttendancePage() {
                     </div>
                     {!isInactive && (
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                      {(['present', 'late', 'absent'] as const).map(s => (
-                        <button key={s} onClick={() => quickSet(student, s)} style={{
-                          padding: '11px 0', borderRadius: 10, border: '2px solid',
-                          borderColor: rec?.status === s ? STATUS_COLOR[s] : '#e2e8f0',
-                          background: rec?.status === s ? STATUS_COLOR[s] + '18' : '#f8fafc',
+                      <button onClick={() => quickSet(student, 'present')} style={{
+                        padding: '11px 0', borderRadius: 10, border: '2px solid',
+                        borderColor: rec?.status === 'present' ? STATUS_COLOR['present'] : '#e2e8f0',
+                        background: rec?.status === 'present' ? STATUS_COLOR['present'] + '18' : '#f8fafc',
+                        cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                        color: rec?.status === 'present' ? STATUS_COLOR['present'] : '#64748b',
+                      }}>
+                        출석
+                      </button>
+                      {rec && (
+                        <button onClick={() => setTimeEdit({ studentId: student.id, checkIn: rec.checkInTime || '', checkOut: rec.checkOutTime || '' })} style={{
+                          padding: '11px 0', borderRadius: 10, border: '2px solid #f59e0b',
+                          background: rec.checkOutTime ? '#fef3c7' : '#fff7ed',
                           cursor: 'pointer', fontWeight: 700, fontSize: 14,
-                          color: rec?.status === s ? STATUS_COLOR[s] : '#64748b',
+                          color: rec.checkOutTime ? '#d97706' : '#f59e0b',
                         }}>
-                          {STATUS[s]}
+                          퇴원
                         </button>
-                      ))}
+                      )}
+                      <button onClick={() => quickSet(student, 'absent')} style={{
+                        padding: '11px 0', borderRadius: 10, border: '2px solid',
+                        borderColor: rec?.status === 'absent' ? STATUS_COLOR['absent'] : '#e2e8f0',
+                        background: rec?.status === 'absent' ? STATUS_COLOR['absent'] + '18' : '#f8fafc',
+                        cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                        color: rec?.status === 'absent' ? STATUS_COLOR['absent'] : '#64748b',
+                      }}>
+                        결석
+                      </button>
                     </div>
                     )}
                     {rec && (
                       <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
-                        {checkoutEdit?.studentId === student.id ? (
-                          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                            <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>퇴원 시간</span>
-                            <input type="time" value={checkoutEdit.time}
-                              onChange={e => setCheckoutEdit({ ...checkoutEdit, time: e.target.value })}
-                              style={{ flex: 1, fontSize: 14, padding: '6px 8px', borderRadius: 8, border: '1px solid #6366f1' }} />
-                            <button onClick={() => saveCheckout(student.id)}
-                              style={{ padding: '7px 12px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>저장</button>
-                            <button onClick={() => setCheckoutEdit(null)}
-                              style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 13, color: '#94a3b8' }}>✕</button>
+                        {timeEdit?.studentId === student.id ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                            {rec.status !== 'absent' && (
+                              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                                <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b', width: 52, flexShrink: 0 }}>입실 시간</span>
+                                <input type="time" value={timeEdit.checkIn}
+                                  onChange={e => setTimeEdit({ ...timeEdit, checkIn: e.target.value })}
+                                  style={{ flex: 1, fontSize: 14, padding: '6px 8px', borderRadius: 8, border: '1px solid #6366f1' }} />
+                              </div>
+                            )}
+                            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                              <span style={{ fontSize: 12, fontWeight: 600, color: '#64748b', width: 52, flexShrink: 0 }}>퇴실 시간</span>
+                              <input type="time" value={timeEdit.checkOut}
+                                onChange={e => setTimeEdit({ ...timeEdit, checkOut: e.target.value })}
+                                style={{ flex: 1, fontSize: 14, padding: '6px 8px', borderRadius: 8, border: '1px solid #6366f1' }} />
+                              <button
+                                type="button"
+                                onClick={() => setTimeEdit({ ...timeEdit, checkOut: localTime() })}
+                                style={{ padding: '6px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}
+                              >
+                                지금
+                              </button>
+                            </div>
+                            <div style={{ display: 'flex', gap: 8 }}>
+                              <button onClick={() => saveTime(student.id)}
+                                style={{ flex: 1, padding: '7px 12px', borderRadius: 8, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>저장</button>
+                              <button onClick={() => setTimeEdit(null)}
+                                style={{ padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 13, color: '#94a3b8' }}>✕</button>
+                            </div>
                           </div>
                         ) : (
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <span style={{ fontSize: 12, color: rec.checkOutTime ? '#d97706' : '#94a3b8', fontWeight: 600 }}>
-                              퇴원 {rec.checkOutTime || '미기록'}
-                            </span>
-                            <button onClick={() => setCheckoutEdit({ studentId: student.id, time: rec.checkOutTime || localTime() })}
-                              style={{ padding: '6px 14px', borderRadius: 8, border: '1px solid #fed7aa', background: '#fff7ed', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#d97706' }}>
-                              퇴원 {rec.checkOutTime ? '수정' : '기록'}
-                            </button>
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                            <div style={{ fontSize: 12, color: '#64748b' }}>
+                              {rec.status !== 'absent' && rec.checkInTime && <span>입 {rec.checkInTime}</span>}
+                              <span style={{ color: rec.checkOutTime ? '#d97706' : '#94a3b8', marginLeft: rec.status !== 'absent' && rec.checkInTime ? 8 : 0 }}>
+                                {rec.checkOutTime ? `퇴 ${rec.checkOutTime}` : '퇴실 미기록'}
+                              </span>
+                            </div>
+                            <div style={{ display: 'flex', gap: 6 }}>
+                              {!rec.checkOutTime && (
+                                <button onClick={() => {
+                                  dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...rec, checkOutTime: localTime() } });
+                                }}
+                                  style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #d97706', background: '#fef3c7', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#d97706' }}>
+                                  퇴실 기입
+                                </button>
+                              )}
+                              <button onClick={() => setTimeEdit({ studentId: student.id, checkIn: rec.checkInTime || '', checkOut: rec.checkOutTime || '' })}
+                                style={{ padding: '6px 12px', borderRadius: 8, border: '1px solid #cbd5e1', background: '#f8fafc', cursor: 'pointer', fontSize: 11, fontWeight: 600, color: '#64748b' }}>
+                                시간 수정
+                              </button>
+                            </div>
                           </div>
                         )}
                       </div>
@@ -623,8 +692,7 @@ export default function AttendancePage() {
                     <tr>
                       <th style={{ minWidth: 110 }}>학생</th>
                       <th>반</th>
-                      <th>입실</th>
-                      <th>퇴실</th>
+                      <th style={{ minWidth: 170 }}>시간</th>
                       <th>상태</th>
                       <th style={{ minWidth: 180 }}>빠른 처리</th>
                       <th>수정</th>
@@ -647,28 +715,52 @@ export default function AttendancePage() {
                             </div>
                           </td>
                           <td><span className="badge badge-blue">{student.classGroup}</span></td>
-                          <td style={{ fontWeight: 600, color: '#16a34a' }}>{rec?.checkInTime || (isInactive ? '' : '-')}</td>
                           <td>
-                            {checkoutEdit?.studentId === student.id ? (
-                              <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-                                <input type="time" value={checkoutEdit.time}
-                                  onChange={e => setCheckoutEdit({ ...checkoutEdit, time: e.target.value })}
-                                  style={{ width: 90, fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #6366f1' }} />
-                                <button onClick={() => saveCheckout(student.id)}
-                                  style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>✓</button>
-                                <button onClick={() => setCheckoutEdit(null)}
-                                  style={{ padding: '4px 6px', borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 12, color: '#94a3b8' }}>✕</button>
+                            {timeEdit?.studentId === student.id ? (
+                              <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                                {rec && rec.status !== 'absent' && (
+                                  <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                    <span style={{ fontSize: 11, color: '#64748b', width: 18, flexShrink: 0 }}>입</span>
+                                    <input type="time" value={timeEdit.checkIn}
+                                      onChange={e => setTimeEdit({ ...timeEdit, checkIn: e.target.value })}
+                                      style={{ width: 85, fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #6366f1' }} />
+                                  </div>
+                                )}
+                                <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                  <span style={{ fontSize: 11, color: '#64748b', width: 18, flexShrink: 0 }}>퇴</span>
+                                  <input type="time" value={timeEdit.checkOut}
+                                    onChange={e => setTimeEdit({ ...timeEdit, checkOut: e.target.value })}
+                                    style={{ width: 85, fontSize: 12, padding: '3px 6px', borderRadius: 6, border: '1px solid #6366f1' }} />
+                                  <button
+                                    type="button"
+                                    onClick={() => setTimeEdit({ ...timeEdit, checkOut: localTime() })}
+                                    style={{ padding: '2px 6px', borderRadius: 4, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 10, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}
+                                  >
+                                    지금
+                                  </button>
+                                </div>
+                                <div style={{ display: 'flex', gap: 4 }}>
+                                  <button onClick={() => saveTime(student.id)}
+                                    style={{ padding: '3px 10px', borderRadius: 5, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontSize: 12, fontWeight: 700 }}>✓</button>
+                                  <button onClick={() => setTimeEdit(null)}
+                                    style={{ padding: '3px 7px', borderRadius: 5, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontSize: 12, color: '#94a3b8' }}>✕</button>
+                                </div>
                               </div>
                             ) : (
-                              <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ fontWeight: 600, color: rec?.checkOutTime ? '#d97706' : '#94a3b8' }}>
-                                  {rec?.checkOutTime || '-'}
-                                </span>
-                                {rec && (
-                                  <button onClick={() => setCheckoutEdit({ studentId: student.id, time: rec.checkOutTime || localTime() })}
-                                    style={{ padding: '3px 8px', borderRadius: 6, border: '1px solid #fed7aa', background: '#fff7ed', cursor: 'pointer', fontSize: 11, fontWeight: 700, color: '#d97706', whiteSpace: 'nowrap' }}>
-                                    퇴원
-                                  </button>
+                              <div style={{ display: 'flex', gap: 6 }}>
+                                {rec ? (
+                                  <div style={{ display: 'flex', gap: 6 }}>
+                                    <button onClick={() => setTimeEdit({ studentId: student.id, checkIn: rec.checkInTime || '', checkOut: rec.checkOutTime || '' })}
+                                      style={{ padding: '6px 10px', borderRadius: 6, border: '1px solid #22c55e', background: '#d1fae5', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#16a34a', whiteSpace: 'nowrap' }}>
+                                      출석 {rec.checkInTime}
+                                    </button>
+                                    <button onClick={() => setTimeEdit({ studentId: student.id, checkIn: rec.checkInTime || '', checkOut: rec.checkOutTime || '' })}
+                                      style={{ padding: '6px 10px', borderRadius: 6, border: `1px solid ${rec.checkOutTime ? '#d97706' : '#f59e0b'}`, background: rec.checkOutTime ? '#fef3c7' : '#fef3c7', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: rec.checkOutTime ? '#d97706' : '#f59e0b', whiteSpace: 'nowrap' }}>
+                                      퇴원 {rec.checkOutTime || '-'}
+                                    </button>
+                                  </div>
+                                ) : (
+                                  <div style={{ fontSize: 12, color: '#94a3b8' }}>-</div>
                                 )}
                               </div>
                             )}
@@ -689,15 +781,28 @@ export default function AttendancePage() {
                               </button>
                             ) : (
                               <div style={{ display: 'flex', gap: 5 }}>
-                                {(['present', 'late', 'absent'] as const).map(s => (
-                                  <button key={s} onClick={() => quickSet(student, s)} style={{
-                                    padding: '5px 8px', borderRadius: 7, border: '1px solid',
-                                    borderColor: rec?.status === s ? STATUS_COLOR[s] : '#e2e8f0',
-                                    background: rec?.status === s ? STATUS_COLOR[s] + '18' : 'white',
-                                    cursor: 'pointer', fontSize: 12, fontWeight: rec?.status === s ? 700 : 400,
-                                    color: rec?.status === s ? STATUS_COLOR[s] : '#64748b',
-                                  }}>{STATUS[s]}</button>
-                                ))}
+                                <button onClick={() => quickSet(student, 'present')} style={{
+                                  padding: '5px 8px', borderRadius: 7, border: '1px solid',
+                                  borderColor: rec?.status === 'present' ? STATUS_COLOR['present'] : '#e2e8f0',
+                                  background: rec?.status === 'present' ? STATUS_COLOR['present'] + '18' : 'white',
+                                  cursor: 'pointer', fontSize: 12, fontWeight: rec?.status === 'present' ? 700 : 400,
+                                  color: rec?.status === 'present' ? STATUS_COLOR['present'] : '#64748b',
+                                }}>출석</button>
+                                {rec && (
+                                  <button onClick={() => setTimeEdit({ studentId: student.id, checkIn: rec.checkInTime || '', checkOut: rec.checkOutTime || '' })} style={{
+                                    padding: '5px 8px', borderRadius: 7, border: '1px solid #f59e0b',
+                                    background: rec.checkOutTime ? '#fef3c7' : '#fff7ed',
+                                    cursor: 'pointer', fontSize: 12, fontWeight: 700,
+                                    color: rec.checkOutTime ? '#d97706' : '#f59e0b',
+                                  }}>퇴원</button>
+                                )}
+                                <button onClick={() => quickSet(student, 'absent')} style={{
+                                  padding: '5px 8px', borderRadius: 7, border: '1px solid',
+                                  borderColor: rec?.status === 'absent' ? STATUS_COLOR['absent'] : '#e2e8f0',
+                                  background: rec?.status === 'absent' ? STATUS_COLOR['absent'] + '18' : 'white',
+                                  cursor: 'pointer', fontSize: 12, fontWeight: rec?.status === 'absent' ? 700 : 400,
+                                  color: rec?.status === 'absent' ? STATUS_COLOR['absent'] : '#64748b',
+                                }}>결석</button>
                               </div>
                             )}
                           </td>

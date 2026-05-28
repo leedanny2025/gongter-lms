@@ -6,7 +6,7 @@ import { fbDelete } from '@/lib/firebase';
 import { TestRecord } from '@/lib/types';
 import { Student } from '@/lib/types';
 import { Plus, CheckCircle, ImageIcon, X, Upload, Pencil, Trash2 } from 'lucide-react';
-import { localDateStr, getWeekKey } from '@/lib/utils';
+import { localDateStr, getWeekKey, getWeekDateRange } from '@/lib/utils';
 
 function AddTestModal({ onSave, onClose }: { onSave: (t: TestRecord) => void; onClose: () => void }) {
   const { state } = useStore();
@@ -208,6 +208,8 @@ function StudentScoreModal({ student, onClose }: {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editScore, setEditScore] = useState('');
   const [editMax, setEditMax] = useState('');
+  const [page, setPage] = useState(0);
+  const PAGE_SIZE = 7;
   const scoreColor = (score: number, max: number) => {
     const pct = (score / max) * 100;
     return pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
@@ -217,6 +219,9 @@ function StudentScoreModal({ student, onClose }: {
     const [, m, day] = d.split('-');
     return `${Number(m)}/${Number(day)}`;
   };
+
+  const totalPages = Math.ceil(sorted.length / PAGE_SIZE);
+  const paginated = sorted.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const saveNew = () => {
     if (!newScore) return;
@@ -304,11 +309,11 @@ function StudentScoreModal({ student, onClose }: {
           </div>
         )}
 
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, maxHeight: 300, overflowY: 'auto' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           {sorted.length === 0 && (
             <div style={{ textAlign: 'center', padding: 24, color: '#94a3b8', fontSize: 13 }}>시험 기록이 없습니다</div>
           )}
-          {sorted.map(t => (
+          {paginated.map(t => (
             <div key={t.id} style={{ borderRadius: 10, background: '#f8fafc', border: '1px solid #f1f5f9', overflow: 'hidden' }}>
               {editingId === t.id ? (
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 12px' }}>
@@ -350,6 +355,18 @@ function StudentScoreModal({ student, onClose }: {
           ))}
         </div>
 
+        {totalPages > 1 && (
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, marginTop: 10 }}>
+            <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page === 0}
+              style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: page === 0 ? '#f8fafc' : 'white', color: page === 0 ? '#cbd5e1' : '#374151', cursor: page === 0 ? 'default' : 'pointer', fontSize: 13, fontWeight: 700 }}>‹</button>
+            {Array.from({ length: totalPages }, (_, i) => (
+              <button key={i} onClick={() => setPage(i)}
+                style={{ padding: '5px 10px', borderRadius: 8, border: '1px solid', borderColor: page === i ? '#6366f1' : '#e2e8f0', background: page === i ? '#eff0ff' : 'white', color: page === i ? '#6366f1' : '#64748b', cursor: 'pointer', fontSize: 13, fontWeight: page === i ? 700 : 400 }}>{i + 1}</button>
+            ))}
+            <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page === totalPages - 1}
+              style={{ padding: '5px 12px', borderRadius: 8, border: '1px solid #e2e8f0', background: page === totalPages - 1 ? '#f8fafc' : 'white', color: page === totalPages - 1 ? '#cbd5e1' : '#374151', cursor: page === totalPages - 1 ? 'default' : 'pointer', fontSize: 13, fontWeight: 700 }}>›</button>
+          </div>
+        )}
         <button className="btn btn-outline" style={{ width: '100%', marginTop: 14 }} onClick={onClose}>닫기</button>
       </div>
     </div>
@@ -371,9 +388,16 @@ export default function TestsPage() {
   const [classFilter, setClassFilter] = useState('전체');
 
   const currentWeek = getWeekKey();
+  const { start: weekStart } = getWeekDateRange(currentWeek);
+  const currentWeekDates = Array.from({ length: 5 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(weekStart.getDate() + i);
+    return localDateStr(d);
+  });
   const classGroups = ['전체', ...new Set(state.students.map(s => s.classGroup))];
 
-  const weekRecords = state.testRecords.filter(t => t.week === currentWeek &&
+  const weekRecords = state.testRecords.filter(t =>
+    (t.week === currentWeek || currentWeekDates.includes(t.date)) &&
     (classFilter === '전체' || state.students.find(s => s.id === t.studentId)?.classGroup === classFilter));
   const records = weekRecords.filter(t => filter === 'all' || t.status === filter);
   const filteredStudents = classFilter === '전체' ? state.students : state.students.filter(s => s.classGroup === classFilter);
@@ -535,7 +559,7 @@ export default function TestsPage() {
           {filteredStudents.map(student => {
             const allConfirmed = state.testRecords.filter(t => t.studentId === student.id && t.status === 'confirmed' && t.score !== null);
             const confirmed = summaryView === 'week'
-              ? allConfirmed.filter(t => t.week === currentWeek)
+              ? allConfirmed.filter(t => t.week === currentWeek || currentWeekDates.includes(t.date))
               : allConfirmed;
             const avg = confirmed.length > 0
               ? Math.round(confirmed.reduce((s, t) => s + ((t.score! / t.maxScore) * 100), 0) / confirmed.length)

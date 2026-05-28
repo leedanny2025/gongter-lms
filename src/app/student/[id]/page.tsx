@@ -46,13 +46,11 @@ export default function StudentDashboard() {
     );
     const test = state.testRecords.find(t => t.studentId === id && t.date === todayStr);
 
-    const items = [
-      { type: 'attendance', label: '출석 체크', done: !!att, icon: '📍' },
-      ...(hw ? [{ type: 'homework', label: '숙제 제출', done: hw.status === 'approved', icon: '📝' }] : []),
-      ...(test ? [{ type: 'test', label: '시험 점수', done: test.status === 'confirmed', icon: '📊' }] : []),
-    ];
-
-    return { items, hasIncomplete: items.some(i => !i.done) };
+    return {
+      attendance: att,
+      homework: hw,
+      test: test,
+    };
   };
 
   const todayTasks = getTodayTasks();
@@ -98,17 +96,30 @@ export default function StudentDashboard() {
 
   const attDays = weekAttendance.filter(a => a.status !== 'absent').length;
   const approvedHW = weekHomework.filter(h => h.status === 'approved').length;
+  const submittedHW = weekHomework.filter(h => h.status === 'pending' || h.status === 'approved').length;
   const pendingHW = weekHomework.filter(h => h.status === 'pending').length;
   const lastTest = weekTests[weekTests.length - 1];
+  const scheduledDaysCount = (student?.scheduleDays || []).length;
 
   const weeklyDollars = state.dollarConditions
     .filter(c => c.enabled)
     .reduce((total, c) => {
-      const met = c.type === 'attendance' ? attDays >= 2
-        : c.type === 'homework' ? approvedHW > 0
-        : c.type === 'test' ? lastTest?.status === 'confirmed'
-        : c.type === 'attitude';
-      return total + (met ? c.amount : 0);
+      let dollarAmount = 0;
+
+      if (c.type === 'attendance') {
+        // 출석: 수업 일수 중 출석한 날짜만큼 비례 지급
+        dollarAmount = scheduledDaysCount > 0 ? Math.round((attDays / scheduledDaysCount) * c.amount) : 0;
+      } else if (c.type === 'homework') {
+        // 숙제: 기입 + 완료 합산, 수업 일수 만큼만 인정
+        const totalSubmitted = Math.min(submittedHW, scheduledDaysCount);
+        dollarAmount = scheduledDaysCount > 0 ? Math.round((totalSubmitted / scheduledDaysCount) * c.amount) : 0;
+      } else if (c.type === 'test') {
+        dollarAmount = lastTest?.status === 'confirmed' ? c.amount : 0;
+      } else if (c.type === 'attitude') {
+        dollarAmount = 0;
+      }
+
+      return total + dollarAmount;
     }, 0);
 
   const maxDollars = state.dollarConditions.filter(c => c.enabled).reduce((s, c) => s + c.amount, 0);
@@ -118,19 +129,51 @@ export default function StudentDashboard() {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       {/* 오늘 할 일 */}
       {todayTasks && (
-        <div style={{ background: todayTasks.hasIncomplete ? 'linear-gradient(135deg, #fee2e2, #fef2f2)' : 'linear-gradient(135deg, #f0fdf4, #dcfce7)', borderRadius: 16, padding: 18, border: `2px solid ${todayTasks.hasIncomplete ? '#fecaca' : '#bbf7d0'}`, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b', marginBottom: 3 }}>오늘 ({new Date().toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })})</div>
-          <h3 style={{ margin: '0 0 14px', fontSize: 16, fontWeight: 800, color: todayTasks.hasIncomplete ? '#991b1b' : '#15803d' }}>
-            {todayTasks.hasIncomplete ? '✋ 완료할 항목이 있습니다' : '✅ 모두 완료했습니다!'}
-          </h3>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 10 }}>
-            {todayTasks.items.map(item => (
-              <div key={item.type} style={{ background: item.done ? 'rgba(34, 197, 94, 0.1)' : 'rgba(220, 38, 38, 0.1)', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${item.done ? '#86efac' : '#fca5a5'}` }}>
-                <div style={{ fontSize: 24, marginBottom: 6 }}>{item.icon}</div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: item.done ? '#16a34a' : '#dc2626' }}>{item.label}</div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{item.done ? '완료' : '미완료'}</div>
-              </div>
-            ))}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>오늘 ({new Date().toLocaleDateString('ko-KR', { month: 'short', day: 'numeric' })})</div>
+
+          {/* 출석 파트 */}
+          <div style={{ background: 'white', borderRadius: 16, padding: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: '#374151' }}>📍 출석</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Link href={`/student/${id}/attendance`} style={{ background: todayTasks.attendance ? '#d1fae5' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.attendance ? '#86efac' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>🚪</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.attendance ? '#16a34a' : '#64748b' }}>입실</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.attendance ? '완료' : '미완료'}</div>
+              </Link>
+              <Link href={`/student/${id}/attendance`} style={{ background: '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: '1px solid #cbd5e1', textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>🚪</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>퇴실</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>확인 필요</div>
+              </Link>
+            </div>
+          </div>
+
+          {/* 숙제 파트 */}
+          <div style={{ background: 'white', borderRadius: 16, padding: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: '#374151' }}>📝 숙제</div>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <Link href={`/student/${id}/homework`} style={{ background: todayTasks.homework ? '#eff0ff' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.homework ? '#c7d2fe' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>✏️</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.homework ? '#6366f1' : '#64748b' }}>기입</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.homework ? '입력됨' : '미입력'}</div>
+              </Link>
+              <Link href={`/student/${id}/homework`} style={{ background: todayTasks.homework?.status === 'approved' ? '#d1fae5' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.homework?.status === 'approved' ? '#86efac' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+                <div style={{ fontSize: 18, marginBottom: 4 }}>✅</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.homework?.status === 'approved' ? '#16a34a' : '#64748b' }}>완료 제출</div>
+                <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.homework?.status === 'approved' ? '완료' : '미제출'}</div>
+              </Link>
+            </div>
+          </div>
+
+          {/* 시험 파트 */}
+          <div style={{ background: 'white', borderRadius: 16, padding: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12, color: '#374151' }}>📊 시험 점수</div>
+            <Link href={`/student/${id}/tests`} style={{ background: todayTasks.test?.status === 'confirmed' ? '#d1fae5' : '#f1f5f9', borderRadius: 12, padding: 12, textAlign: 'center', border: `1px solid ${todayTasks.test?.status === 'confirmed' ? '#86efac' : '#cbd5e1'}`, textDecoration: 'none', display: 'block', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <div style={{ fontSize: 24, marginBottom: 4 }}>🎯</div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: todayTasks.test?.status === 'confirmed' ? '#16a34a' : '#64748b' }}>점수 입력</div>
+              <div style={{ fontSize: 10, color: '#94a3b8', marginTop: 2 }}>{todayTasks.test?.status === 'confirmed' ? `${todayTasks.test.score}/${todayTasks.test.maxScore}` : '미입력'}</div>
+            </Link>
           </div>
         </div>
       )}
@@ -150,9 +193,15 @@ export default function StudentDashboard() {
                 </tr>
               </thead>
               <tbody>
-                {weeklyProgress.map((day, idx) => (
+                {weeklyProgress.map((day, idx) => {
+                  const [year, month, date] = day.date.split('-');
+                  const displayDate = `${parseInt(month)}/${parseInt(date)}`;
+                  return (
                   <tr key={day.date} style={{ borderBottom: idx < weeklyProgress.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                    <td style={{ padding: '12px 8px', fontWeight: 600, color: '#374151' }}>{day.dayName}요일</td>
+                    <td style={{ padding: '12px 8px', fontWeight: 600, color: '#374151' }}>
+                      <div style={{ fontSize: 14 }}>{day.dayName}요일</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{displayDate}</div>
+                    </td>
                     <td style={{ padding: '12px 8px', textAlign: 'center' }}>
                       <span style={{ display: 'inline-block', width: 28, height: 28, borderRadius: 8, background: day.attendance ? '#dcfce7' : '#f1f5f9', color: day.attendance ? '#16a34a' : '#cbd5e1', fontWeight: 700, lineHeight: '28px' }}>
                         {day.attendance ? '✓' : '-'}
@@ -169,7 +218,8 @@ export default function StudentDashboard() {
                       </span>
                     </td>
                   </tr>
-                ))}
+                  );
+                })}
               </tbody>
             </table>
           </div>

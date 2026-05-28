@@ -8,10 +8,12 @@ import { ShopItem } from '@/lib/types';
 
 type AwardEntry = { name: string; amount: number };
 type Tab = 'award' | 'shop';
+type ViewMode = 'card' | 'table';
 
 export default function DollarsPage() {
   const { state, dispatch } = useStore();
   const [tab, setTab] = useState<Tab>('award');
+  const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   // 지급 탭 state
   const [week, setWeek] = useState(state.currentWeek);
@@ -223,12 +225,28 @@ export default function DollarsPage() {
         <>
           <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 16 }}>
             <WeekSelector week={week} onChange={setWeek} />
-            <button
-              onClick={toggleSelectAll}
-              style={{ padding: '10px 16px', borderRadius: 10, border: `2px solid ${allSelected ? '#6366f1' : '#e2e8f0'}`, background: allSelected ? '#eff0ff' : 'white', color: allSelected ? '#6366f1' : '#374151', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
-            >
-              {allSelected ? '전체 해제' : '전체 선택'}
-            </button>
+            <div style={{ display: 'flex', gap: 0, background: '#f1f5f9', borderRadius: 8, padding: 3 }}>
+              <button
+                onClick={() => setViewMode('table')}
+                style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: viewMode === 'table' ? 'white' : 'transparent', color: viewMode === 'table' ? '#6366f1' : '#64748b', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: viewMode === 'table' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}
+              >
+                표 보기
+              </button>
+              <button
+                onClick={() => setViewMode('card')}
+                style={{ padding: '7px 14px', borderRadius: 6, border: 'none', background: viewMode === 'card' ? 'white' : 'transparent', color: viewMode === 'card' ? '#6366f1' : '#64748b', fontWeight: 700, fontSize: 13, cursor: 'pointer', boxShadow: viewMode === 'card' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none' }}
+              >
+                카드 보기
+              </button>
+            </div>
+            {viewMode === 'card' && (
+              <button
+                onClick={toggleSelectAll}
+                style={{ padding: '10px 16px', borderRadius: 10, border: `2px solid ${allSelected ? '#6366f1' : '#e2e8f0'}`, background: allSelected ? '#eff0ff' : 'white', color: allSelected ? '#6366f1' : '#374151', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}
+              >
+                {allSelected ? '전체 해제' : '전체 선택'}
+              </button>
+            )}
             {selectedIds.size > 0 && (
               <button
                 onClick={awardSelected}
@@ -290,8 +308,66 @@ export default function DollarsPage() {
             </div>
           </div>
 
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
-            {state.students.map(student => {
+          {viewMode === 'table' && (
+            <div className="card" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14 }}>
+                <thead>
+                  <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#374151', fontSize: 13 }}>학생명</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#374151', fontSize: 13 }}>학년</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#0369a1', fontSize: 13 }}>📋 기본</th>
+                    {bonusConditions.length > 0 && (
+                      <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>⭐ 보너스</th>
+                    )}
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#16a34a', fontSize: 13 }}>이번 주</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>총 보유</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {state.students.map((student, idx) => {
+                    const amount = calcDollars(student.id);
+                    const basicEarned = basicConditions.reduce((s, c) => s + (conditionMet(student.id, c.type) ? c.amount : 0), 0);
+                    const bonusEarned = bonusConditions.reduce((s, c) => s + (conditionMet(student.id, c.type) ? c.amount : 0), 0);
+                    const basicMet = basicConditions.filter(c => conditionMet(student.id, c.type)).length;
+                    const bonusMet = bonusConditions.filter(c => conditionMet(student.id, c.type)).length;
+
+                    return (
+                      <tr key={student.id} style={{ borderBottom: idx < state.students.length - 1 ? '1px solid #e2e8f0' : 'none', background: idx % 2 === 0 ? '#f8fafc' : 'white' }}>
+                        <td style={{ padding: '12px 14px', fontWeight: 600, color: '#374151' }}>{student.name}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, color: '#64748b' }}>{student.grade}</td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                          <span style={{ fontWeight: 700, color: basicEarned > 0 ? '#0369a1' : '#94a3b8' }}>
+                            {basicMet}/{basicConditions.length}
+                          </span>
+                        </td>
+                        {bonusConditions.length > 0 && (
+                          <td style={{ padding: '12px 14px', textAlign: 'center' }}>
+                            <span style={{ fontWeight: 700, color: bonusEarned > 0 ? '#7c3aed' : '#94a3b8' }}>
+                              {bonusMet}/{bonusConditions.length}
+                            </span>
+                          </td>
+                        )}
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, color: amount > 0 ? '#16a34a' : '#94a3b8', fontSize: 15 }}>
+                            +${amount}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, color: '#7c3aed', fontSize: 15 }}>
+                            ${student.dollars}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {viewMode === 'card' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: 14 }}>
+              {state.students.map(student => {
               const amount = calcDollars(student.id);
               const isExpanded = selectedStudent === student.id;
               const isBatchSelected = selectedIds.has(student.id);
@@ -395,8 +471,9 @@ export default function DollarsPage() {
                   </div>
                 </div>
               );
-            })}
-          </div>
+              })}
+            </div>
+          )}
         </>
       )}
 

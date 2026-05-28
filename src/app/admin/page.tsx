@@ -2,9 +2,206 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { Users, DollarSign, BookOpen, ClipboardCheck, Calendar, TrendingUp, Clock } from 'lucide-react';
+import { Users, DollarSign, BookOpen, ClipboardCheck, Calendar, TrendingUp, Clock, X } from 'lucide-react';
+import { TestRecord, DayHomework, AttendanceRecord, HomeworkDay } from '@/lib/types';
 import WeekSelector from '@/components/WeekSelector';
 import { localDateStr, getWeekDateRange } from '@/lib/utils';
+
+const DAY_LABEL: Record<string, string> = { mon: '월', tue: '화', wed: '수', thu: '목', fri: '금' };
+const STATUS_COLOR_ATT = { present: '#22c55e', late: '#f59e0b', absent: '#ef4444' };
+
+const HW_STATUSES = [
+  { value: 'no_hw',  label: '— 숙제없음', bg: '#f1f5f9', color: '#64748b' },
+  { value: 'missed', label: '✗ 미이행',  bg: '#fed7aa', color: '#9a3412' },
+  { value: 'agreed', label: '✏️ 진행 중', bg: '#eff0ff', color: '#4338ca' },
+  { value: 'confirmed', label: '✅ 완료', bg: '#d1fae5', color: '#15803d' },
+] as const;
+
+function HomeworkDashModal({ hw, studentId, studentName, day, week, onClose, onAction, onAdd }: {
+  hw: DayHomework | null;
+  studentId: string;
+  studentName: string;
+  day: string;
+  week: string;
+  onClose: () => void;
+  onAction: (type: string, payload: unknown) => void;
+  onAdd: (hw: DayHomework) => void;
+}) {
+  const [computer, setComputer] = useState(hw?.computer || '');
+  const [textbook, setTextbook] = useState(hw?.textbook || '');
+  const [vocabulary, setVocabulary] = useState(hw?.vocabulary || '');
+  const [other, setOther] = useState(hw?.other || '');
+  const [editStatus, setEditStatus] = useState<string>(hw?.status || 'pending');
+
+  const save = () => {
+    const updated = { computer, textbook, vocabulary, other, status: editStatus as HomeworkDay };
+    if (hw) {
+      const agreedAt = editStatus === 'agreed' ? (hw.agreedAt || new Date().toISOString()) : hw.agreedAt;
+      const approvedAt = editStatus === 'confirmed' ? (hw.approvedAt || new Date().toISOString()) : hw.approvedAt;
+      onAction('UPDATE_HOMEWORK', { ...hw, ...updated, agreedAt, approvedAt });
+    } else {
+      onAdd({
+        id: `h${Date.now()}`, studentId, studentName, week, day: day as HomeworkDay,
+        submittedAt: '', ...updated,
+        status: editStatus as HomeworkDay,
+      } as unknown as DayHomework);
+    }
+    onClose();
+  };
+
+  const inputStyle = { fontSize: 13, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' as const };
+
+  return (
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>숙제 상세</h3>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{studentName} · {DAY_LABEL[day] || day}요일</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} color="#94a3b8" /></button>
+        </div>
+
+        {/* 숙제 내용 */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 14 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b' }}>숙제 내용</div>
+          {[
+            { label: '컴퓨터', value: computer, set: setComputer },
+            { label: '교재',   value: textbook,  set: setTextbook },
+            { label: '단어',   value: vocabulary, set: setVocabulary },
+            { label: '기타',   value: other,      set: setOther },
+          ].map(({ label, value, set }) => (
+            <div key={label} style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ fontSize: 12, color: '#64748b', width: 40, flexShrink: 0 }}>{label}</span>
+              <input value={value} onChange={e => set(e.target.value)} placeholder={`${label} 숙제`} style={inputStyle} />
+            </div>
+          ))}
+        </div>
+
+        {/* 상태 선택 */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 8 }}>상태</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 6 }}>
+            {HW_STATUSES.map(s => (
+              <button key={s.value} onClick={() => setEditStatus(s.value)} style={{
+                padding: '9px 4px', borderRadius: 9, border: `2px solid ${editStatus === s.value ? s.color : '#e2e8f0'}`,
+                background: editStatus === s.value ? s.bg : 'white',
+                color: editStatus === s.value ? s.color : '#94a3b8',
+                cursor: 'pointer', fontWeight: 700, fontSize: 12,
+              }}>{s.label}</button>
+            ))}
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 8 }}>
+          <button onClick={onClose} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#64748b' }}>취소</button>
+          <button onClick={save} style={{ flex: 2, padding: '11px', borderRadius: 10, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>저장</button>
+        </div>
+        <a href="/admin/homework" style={{ display: 'block', marginTop: 10, textAlign: 'center', padding: '9px', borderRadius: 10, background: '#f8fafc', color: '#64748b', fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>
+          숙제 페이지로 →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function AttDashModal({ rec, studentId, studentName, classGroup, date, onClose, onSave, onDelete }: {
+  rec: AttendanceRecord | null;
+  studentId: string;
+  studentName: string;
+  classGroup: string;
+  date: string;
+  onClose: () => void;
+  onSave: (r: AttendanceRecord) => void;
+  onDelete: (id: string) => void;
+}) {
+  const [status, setStatus] = useState<'present' | 'late' | 'absent'>(rec?.status || 'present');
+  const [checkIn, setCheckIn] = useState(rec?.checkInTime || '');
+  const [checkOut, setCheckOut] = useState(rec?.checkOutTime || '');
+  const [reason, setReason] = useState(rec?.reason || '');
+  const localTime = () => new Date().toTimeString().slice(0, 5);
+  const save = () => {
+    onSave({
+      id: rec?.id || `a${Date.now()}`,
+      studentId, studentName, classGroup, date,
+      checkInTime: status === 'absent' ? '' : (checkIn || localTime()),
+      checkOutTime: checkOut || undefined,
+      status,
+      reason: (status === 'late' || status === 'absent') && reason ? reason : undefined,
+    });
+    onClose();
+  };
+  return (
+    <div onMouseDown={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+      <div onMouseDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+          <div>
+            <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>{studentName}</h3>
+            <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{date}</div>
+          </div>
+          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} color="#94a3b8" /></button>
+        </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {(['present', 'late', 'absent'] as const).map(s => (
+              <button key={s} onClick={() => setStatus(s)} style={{
+                flex: 1, padding: '10px 0', borderRadius: 10, border: '2px solid',
+                borderColor: status === s ? STATUS_COLOR_ATT[s] : '#e2e8f0',
+                background: status === s ? STATUS_COLOR_ATT[s] + '18' : 'white',
+                cursor: 'pointer', fontWeight: 700, fontSize: 13,
+                color: status === s ? STATUS_COLOR_ATT[s] : '#94a3b8',
+              }}>{{ present: '출석', late: '지각', absent: '결석' }[s]}</button>
+            ))}
+          </div>
+          {status !== 'absent' && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>입실 시간</label>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <input type="time" value={checkIn} onChange={e => setCheckIn(e.target.value)}
+                    style={{ flex: 1, fontSize: 14, padding: '8px 10px', fontWeight: 600 }} />
+                  <button type="button" onClick={() => setCheckIn(localTime())}
+                    style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #e2e8f0', background: '#f8fafc', cursor: 'pointer', fontSize: 12, fontWeight: 600, color: '#64748b', whiteSpace: 'nowrap' }}>지금</button>
+                </div>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: '#d97706', display: 'block', marginBottom: 4 }}>퇴원 시간</label>
+                {checkOut ? (
+                  <div style={{ display: 'flex', gap: 6 }}>
+                    <input type="time" value={checkOut} onChange={e => setCheckOut(e.target.value)}
+                      style={{ flex: 1, fontSize: 14, padding: '8px 10px', fontWeight: 700, color: '#d97706', border: '2px solid #fbbf24', borderRadius: 8 }} />
+                    <button type="button" onClick={() => setCheckOut(localTime())}
+                      style={{ padding: '8px 10px', borderRadius: 8, border: '1px solid #fbbf24', background: '#fffbeb', cursor: 'pointer', fontSize: 12, fontWeight: 700, color: '#d97706', whiteSpace: 'nowrap' }}>지금</button>
+                    <button type="button" onClick={() => setCheckOut('')}
+                      style={{ padding: '8px 9px', borderRadius: 8, border: '1px solid #fecaca', background: '#fef2f2', cursor: 'pointer', fontSize: 12, color: '#ef4444' }}>✕</button>
+                  </div>
+                ) : (
+                  <button type="button" onClick={() => setCheckOut(localTime())}
+                    style={{ width: '100%', padding: '12px', borderRadius: 10, border: '2px dashed #fbbf24', background: '#fffbeb', cursor: 'pointer', fontSize: 13, fontWeight: 700, color: '#d97706', textAlign: 'center' }}>
+                    + 퇴원 시간 기록 (지금)
+                  </button>
+                )}
+              </div>
+            </div>
+          )}
+          {(status === 'late' || status === 'absent') && (
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>사유 <span style={{ fontWeight: 400 }}>(선택)</span></label>
+              <input type="text" value={reason} onChange={e => setReason(e.target.value)} placeholder={status === 'late' ? '지각 사유' : '결석 사유'} style={{ fontSize: 13, padding: '7px 10px' }} />
+            </div>
+          )}
+        </div>
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          {rec && (
+            <button onClick={() => { onDelete(rec.id); onClose(); }} style={{ padding: '10px 12px', borderRadius: 10, border: 'none', background: '#fee2e2', color: '#ef4444', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>삭제</button>
+          )}
+          <button onClick={onClose} style={{ flex: 1, padding: '10px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#64748b' }}>취소</button>
+          <button onClick={save} style={{ flex: 1, padding: '10px', borderRadius: 10, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>저장</button>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function StatCard({ title, value, sub, icon: Icon, color, href }: { title: string; value: string | number; sub: string; icon: React.ElementType; color: string; href?: string }) {
   const inner = (
@@ -33,6 +230,17 @@ const NAME_CELL: React.CSSProperties = {
 export default function AdminDashboard() {
   const { state, dispatch } = useStore();
   const [week, setWeek] = useState(state.currentWeek);
+  const [testPopup, setTestPopup] = useState<{ test: TestRecord; studentName: string } | null>(null);
+  const [testEditScore, setTestEditScore] = useState('');
+  const [hwPopup, setHwPopup] = useState<{ hw: DayHomework | null; studentId: string; studentName: string; day: string; week: string } | null>(null);
+  const [attPopup, setAttPopup] = useState<{ rec: AttendanceRecord | null; studentId: string; studentName: string; classGroup: string; date: string } | null>(null);
+  const [addTestPopup, setAddTestPopup] = useState<{ studentId: string; studentName: string; date: string } | null>(null);
+  const [addTestSubject, setAddTestSubject] = useState('영어 어휘 테스트');
+  const [addTestScore, setAddTestScore] = useState('');
+  const [addTestMax, setAddTestMax] = useState('20');
+  const [testEditSubject, setTestEditSubject] = useState('');
+  const [testEditMax, setTestEditMax] = useState('');
+  const [testEditDate, setTestEditDate] = useState('');
 
   const handleWeekChange = (w: string) => {
     setWeek(w);
@@ -124,6 +332,7 @@ export default function AdminDashboard() {
                 const hasSchedule = (s.scheduleDays || []).length > 0;
                 const isScheduled = !hasSchedule || (s.scheduleDays || []).includes(day);
                 const hw = weekHW.find(h => h.studentId === s.id && h.day === day);
+                const openHw = () => setHwPopup({ hw: hw || null, studentId: s.id, studentName: s.name, day, week });
                 if (!isScheduled && !hw) {
                   return <div key={day} style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: '#f8fafc', fontSize: 12, color: '#e2e8f0' }}>–</div>;
                 }
@@ -137,7 +346,9 @@ export default function AdminDashboard() {
                   : st === 'no_hw'     ? { e: '—', bg: '#f1f5f9' }
                   : { e: '·', bg: '#f1f5f9' };
                 return (
-                  <div key={day} title={st === 'no_hw' ? '숙제없음' : st || (isScheduled ? '미제출' : '보충')} style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: st === 'no_hw' ? 12 : 14, color: st === 'no_hw' ? '#94a3b8' : undefined }}>
+                  <div key={day} title={st === 'no_hw' ? '숙제없음' : st || (isScheduled ? '미제출' : '보충')}
+                    onClick={openHw}
+                    style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: st === 'no_hw' ? 12 : 14, color: st === 'no_hw' ? '#94a3b8' : undefined, cursor: 'pointer' }}>
                     {cell.e}
                   </div>
                 );
@@ -182,9 +393,11 @@ export default function AdminDashboard() {
                 const prevAbsent = prevRec?.status === 'absent';
                 const isPast = date <= todayStr;
 
+                const openAtt = () => setAttPopup({ rec: rec || null, studentId: s.id, studentName: s.name, classGroup: s.classGroup, date });
+
                 if (!isScheduled && !rec) {
                   return (
-                    <div key={date} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f8fafc', fontSize: 11 }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f8fafc', fontSize: 11, cursor: 'pointer' }}>
                       <div style={{ color: '#e2e8f0' }}>–</div>
                     </div>
                   );
@@ -192,7 +405,7 @@ export default function AdminDashboard() {
 
                 if (!rec) {
                   return (
-                    <div key={date} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11 }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, cursor: 'pointer' }}>
                       <div style={{ color: '#cbd5e1' }}>{isPast ? '·' : ''}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
                     </div>
@@ -201,7 +414,7 @@ export default function AdminDashboard() {
 
                 if (rec.status === 'present') {
                   return (
-                    <div key={date} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : '#d1fae5', fontSize: 13 }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : '#d1fae5', fontSize: 13, cursor: 'pointer' }}>
                       <div>{!isScheduled ? '보' : '✅'}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
                     </div>
@@ -222,7 +435,7 @@ export default function AdminDashboard() {
                     }
                   }
                   return (
-                    <div key={date} style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: '#fef3c7', fontSize: 11 }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: '#fef3c7', fontSize: 11, cursor: 'pointer' }}>
                       <div>⏰</div>
                       <div style={{ fontSize: 9, fontWeight: 700, color: '#92400e' }}>{lateText}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
@@ -232,7 +445,7 @@ export default function AdminDashboard() {
 
                 // absent
                 return (
-                  <div key={date} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#fee2e2', fontSize: 13 }}>
+                  <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#fee2e2', fontSize: 13, cursor: 'pointer' }}>
                     ❌
                   </div>
                 );
@@ -266,15 +479,18 @@ export default function AdminDashboard() {
               <div style={NAME_CELL}>{s.name}</div>
               {DAYS_HW.map(day => {
                 const test = weekTests.find(t => t.studentId === s.id && dateToDay(t.date) === day);
+                const dateForDay = weekDates[DAYS_HW.indexOf(day)];
                 if (!test) {
                   return (
-                    <div key={day} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, color: '#cbd5e1' }}>·</div>
+                    <div key={day} onClick={() => { setAddTestPopup({ studentId: s.id, studentName: s.name, date: dateForDay }); setAddTestSubject('영어 어휘 테스트'); setAddTestScore(''); setAddTestMax('20'); }}
+                      style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>·</div>
                   );
                 }
                 const confirmed = test.status === 'confirmed';
                 const scoreText = test.score !== null ? `${test.score}개` : '-';
                 return (
-                  <div key={day} title={test.subject} style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: confirmed ? '#d1fae5' : '#fef3c7', fontSize: 11 }}>
+                  <div key={day} title={test.subject} onClick={() => { setTestPopup({ test, studentName: s.name }); setTestEditScore(test.score?.toString() ?? ''); setTestEditSubject(test.subject); setTestEditMax(test.maxScore.toString()); setTestEditDate(test.date); }}
+                    style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: confirmed ? '#d1fae5' : '#fef3c7', fontSize: 11, cursor: 'pointer' }}>
                     <div>{confirmed ? '✅' : '⏳'}</div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: confirmed ? '#15803d' : '#92400e' }}>{scoreText}</div>
                   </div>
@@ -369,6 +585,151 @@ export default function AdminDashboard() {
         </div>
 
       </div>
+
+      {testPopup && (
+        <div onMouseDown={() => setTestPopup(null)}
+          style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onMouseDown={e => e.stopPropagation()}
+            style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>시험 상세 / 수정</h3>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{testPopup.studentName}</div>
+              </div>
+              <button onClick={() => setTestPopup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
+                <X size={20} color="#94a3b8" />
+              </button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>시험명</label>
+                <input value={testEditSubject} onChange={e => setTestEditSubject(e.target.value)}
+                  style={{ fontSize: 13, padding: '8px 10px', width: '100%', boxSizing: 'border-box' as const }} />
+              </div>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>날짜</label>
+                <input type="date" value={testEditDate} onChange={e => setTestEditDate(e.target.value)}
+                  style={{ fontSize: 13, padding: '8px 10px', width: '100%', boxSizing: 'border-box' as const }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>맞은 점수</label>
+                  <input type="number" value={testEditScore} onChange={e => setTestEditScore(e.target.value)}
+                    placeholder="점수" min="0"
+                    style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', padding: '8px', width: '100%', boxSizing: 'border-box' as const }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>만점</label>
+                  <input type="number" value={testEditMax} onChange={e => setTestEditMax(e.target.value)}
+                    placeholder="만점" min="1"
+                    style={{ fontSize: 22, fontWeight: 700, textAlign: 'center', padding: '8px', width: '100%', boxSizing: 'border-box' as const }} />
+                </div>
+              </div>
+              <div style={{ background: '#f8fafc', borderRadius: 8, padding: '8px 12px', fontSize: 12, color: '#64748b' }}>
+                {testPopup.test.submittedByStudent ? '학생 직접 제출' : '선생님 입력'} · {testPopup.test.status === 'confirmed' ? '✅ 확정됨' : '⏳ 확인대기'}
+              </div>
+            </div>
+            {testPopup.test.imageUrl && (
+              <div style={{ marginTop: 12 }}>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginBottom: 6 }}>첨부 이미지</div>
+                <img src={testPopup.test.imageUrl} alt="시험지" style={{ width: '100%', borderRadius: 10, border: '1px solid #e2e8f0', maxHeight: 200, objectFit: 'contain' }} />
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button onClick={() => setTestPopup(null)}
+                style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#64748b' }}>취소</button>
+              <button onClick={() => {
+                const s = testEditScore !== '' ? Number(testEditScore) : null;
+                dispatch({ type: 'UPDATE_TEST', payload: {
+                  ...testPopup.test,
+                  subject: testEditSubject,
+                  date: testEditDate,
+                  score: s,
+                  maxScore: Number(testEditMax) || testPopup.test.maxScore,
+                  status: s !== null ? 'confirmed' : 'pending',
+                  confirmedAt: s !== null ? (testPopup.test.confirmedAt ?? new Date().toISOString()) : undefined,
+                }});
+                setTestPopup(null);
+              }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>저장</button>
+            </div>
+            <a href="/admin/tests" style={{ display: 'block', marginTop: 10, textAlign: 'center', padding: '9px', borderRadius: 10, background: '#f8fafc', color: '#64748b', fontWeight: 600, fontSize: 12, textDecoration: 'none' }}>
+              시험 페이지로 →
+            </a>
+          </div>
+        </div>
+      )}
+
+      {hwPopup && (
+        <HomeworkDashModal
+          hw={hwPopup.hw}
+          studentId={hwPopup.studentId}
+          studentName={hwPopup.studentName}
+          day={hwPopup.day}
+          week={hwPopup.week}
+          onClose={() => setHwPopup(null)}
+          onAction={(type, payload) => dispatch({ type: type as never, payload: payload as never })}
+          onAdd={hw => dispatch({ type: 'ADD_HOMEWORK', payload: hw })}
+        />
+      )}
+
+      {addTestPopup && (
+        <div onClick={() => setAddTestPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>시험 점수 입력</h3>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{addTestPopup.studentName} · {addTestPopup.date}</div>
+              </div>
+              <button onClick={() => setAddTestPopup(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} color="#94a3b8" /></button>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>시험명</label>
+                <input value={addTestSubject} onChange={e => setAddTestSubject(e.target.value)} style={{ fontSize: 13, padding: '8px 10px' }} />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>점수</label>
+                  <input type="number" value={addTestScore} onChange={e => setAddTestScore(e.target.value)} placeholder="0" min="0"
+                    style={{ fontSize: 20, fontWeight: 700, textAlign: 'center', padding: '8px' }} />
+                </div>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#64748b', display: 'block', marginBottom: 4 }}>만점</label>
+                  <input type="number" value={addTestMax} onChange={e => setAddTestMax(e.target.value)} placeholder="20" min="1"
+                    style={{ fontSize: 20, fontWeight: 700, textAlign: 'center', padding: '8px' }} />
+                </div>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button onClick={() => setAddTestPopup(null)} style={{ flex: 1, padding: '11px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 13, color: '#64748b' }}>취소</button>
+              <button onClick={() => {
+                if (!addTestScore) return;
+                dispatch({ type: 'ADD_TEST', payload: {
+                  id: `t${Date.now()}`, studentId: addTestPopup.studentId, studentName: addTestPopup.studentName,
+                  subject: addTestSubject, score: Number(addTestScore), maxScore: Number(addTestMax),
+                  submittedByStudent: false, status: 'confirmed', confirmedAt: new Date().toISOString(),
+                  week, date: addTestPopup.date,
+                }});
+                setAddTestPopup(null);
+              }} style={{ flex: 1, padding: '11px', borderRadius: 10, border: 'none', background: '#22c55e', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 13 }}>저장</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {attPopup && (
+        <AttDashModal
+          {...attPopup}
+          onClose={() => setAttPopup(null)}
+          onSave={r => {
+            const exists = state.attendanceRecords.find(a => a.studentId === attPopup.studentId && a.date === attPopup.date);
+            exists
+              ? dispatch({ type: 'UPDATE_ATTENDANCE', payload: { ...r, id: exists.id } })
+              : dispatch({ type: 'ADD_ATTENDANCE', payload: r });
+          }}
+          onDelete={id => dispatch({ type: 'DELETE_ATTENDANCE', payload: id })}
+        />
+      )}
     </div>
   );
 }
