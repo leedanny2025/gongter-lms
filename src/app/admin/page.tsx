@@ -336,6 +336,30 @@ export default function AdminDashboard() {
   const basicConditions = enabledConditions.filter(c => ['attendance', 'homework', 'test'].includes(c.type));
   const bonusConditions = enabledConditions.filter(c => ['attitude', 'custom'].includes(c.type));
 
+  const getStudentScheduledDays = (studentId: string) => {
+    const student = state.students.find(s => s.id === studentId);
+    return student?.scheduleDays?.length || 5;
+  };
+
+  const getAchievementRate = (studentId: string, type: string): { rate: number; count: number; total: number } => {
+    if (type === 'attendance') {
+      const total = getStudentScheduledDays(studentId);
+      const count = state.attendanceRecords.filter(a => a.studentId === studentId && a.status !== 'absent').length;
+      return { rate: count / total, count, total };
+    }
+    if (type === 'homework') {
+      const total = getStudentScheduledDays(studentId);
+      const count = (state.dayHomeworks || []).filter(h => h.studentId === studentId && h.week === week && h.status === 'approved').length;
+      return { rate: count / total, count, total };
+    }
+    if (type === 'test') {
+      const total = getStudentScheduledDays(studentId);
+      const count = state.testRecords.filter(t => t.studentId === studentId && weekDates.includes(t.date) && t.status === 'confirmed').length;
+      return { rate: count / total, count, total };
+    }
+    return { rate: 0, count: 0, total: 1 };
+  };
+
   const conditionMet = (studentId: string, type: string): boolean => {
     if (type === 'attendance') return state.attendanceRecords.filter(a => a.studentId === studentId && a.status !== 'absent').length >= 2;
     if (type === 'homework') return state.dayHomeworks.some(h => h.studentId === studentId && h.week === week && h.status === 'approved');
@@ -348,8 +372,19 @@ export default function AdminDashboard() {
     }
     return false;
   };
-  const calcWeeklyDollars = (studentId: string) =>
-    enabledConditions.reduce((sum, c) => sum + (conditionMet(studentId, c.type) ? c.amount : 0), 0);
+
+  const calcWeeklyDollars = (studentId: string) => {
+    let total = 0;
+    basicConditions.forEach(c => {
+      const { rate } = getAchievementRate(studentId, c.type);
+      const earnedAmount = Math.round(c.amount * rate);
+      total += earnedAmount;
+    });
+    bonusConditions.forEach(c => {
+      total += conditionMet(studentId, c.type) ? c.amount : 0;
+    });
+    return total;
+  };
 
   const DAY_KO = ['월', '화', '수', '목', '금'];
   const DAYS_HW = ['mon', 'tue', 'wed', 'thu', 'fri'] as const;
@@ -651,12 +686,15 @@ export default function AdminDashboard() {
                         ${s.dollars}
                       </div>
                       {basicConditions.map(c => {
-                        const met = conditionMet(s.id, c.type);
+                        const { rate, count, total } = getAchievementRate(s.id, c.type);
+                        const earnedAmount = Math.round(c.amount * rate);
+                        const ratePct = Math.round(rate * 100);
                         return (
                           <div key={c.id} style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
-                            background: met ? '#d1fae5' : '#f1f5f9', fontSize: 11, fontWeight: 700,
-                            color: met ? '#15803d' : '#cbd5e1' }}>
-                            {met ? `+$${c.amount}` : '—'}
+                            background: rate > 0 ? '#d1fae5' : '#f1f5f9', fontSize: 11, fontWeight: 700,
+                            color: rate > 0 ? '#15803d' : '#cbd5e1' }}>
+                            <div style={{ fontSize: 10 }}>{count}/{total}</div>
+                            <div>+${earnedAmount}</div>
                           </div>
                         );
                       })}

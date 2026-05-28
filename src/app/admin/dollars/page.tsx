@@ -66,12 +66,33 @@ export default function DollarsPage() {
   };
 
   const calcDollars = (studentId: string) => {
-    const s = getStatus(studentId);
-    return enabledConditions.reduce((total, c) => {
-      const met = c.type === 'attendance' ? s.attendance : c.type === 'homework' ? s.homework
-        : c.type === 'test' ? s.test : c.type === 'attitude' ? s.attitude : false;
-      return total + (met ? c.amount : 0);
-    }, 0);
+    let total = 0;
+    basicConditions.forEach(c => {
+      const { attendanceCount, homeworkCount, testCount, total: maxDays } = getAchievementCounts(studentId);
+      let rate = 0;
+      if (c.type === 'attendance') rate = attendanceCount / maxDays;
+      else if (c.type === 'homework') rate = homeworkCount / maxDays;
+      else if (c.type === 'test') rate = testCount / maxDays;
+      const earnedAmount = Math.round(c.amount * rate);
+      total += earnedAmount;
+    });
+    bonusConditions.forEach(c => {
+      total += conditionMet(studentId, c.type) ? c.amount : 0;
+    });
+    return total;
+  };
+
+  const getStudentScheduledDays = (studentId: string) => {
+    const student = state.students.find(s => s.id === studentId);
+    return student?.scheduleDays?.length || 5;
+  };
+
+  const getAchievementCounts = (studentId: string) => {
+    const total = getStudentScheduledDays(studentId);
+    const attendanceCount = state.attendanceRecords.filter(a => a.studentId === studentId && a.status !== 'absent').length;
+    const homeworkCount = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week && h.status === 'approved').length;
+    const testCount = state.testRecords.filter(t => t.studentId === studentId && t.week === week && t.status === 'confirmed').length;
+    return { attendanceCount, homeworkCount, testCount, total };
   };
 
   const conditionMet = (studentId: string, type: string) => {
@@ -314,8 +335,9 @@ export default function DollarsPage() {
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                     <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#374151', fontSize: 13 }}>학생명</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#374151', fontSize: 13 }}>학년</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#0369a1', fontSize: 13 }}>📋 기본</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#0369a1', fontSize: 13 }}>출석</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#0369a1', fontSize: 13 }}>숙제</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#0369a1', fontSize: 13 }}>시험</th>
                     {bonusConditions.length > 0 && (
                       <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>⭐ 보너스</th>
                     )}
@@ -326,18 +348,26 @@ export default function DollarsPage() {
                 <tbody>
                   {state.students.map((student, idx) => {
                     const amount = calcDollars(student.id);
-                    const basicEarned = basicConditions.reduce((s, c) => s + (conditionMet(student.id, c.type) ? c.amount : 0), 0);
+                    const { attendanceCount, homeworkCount, testCount, total } = getAchievementCounts(student.id);
                     const bonusEarned = bonusConditions.reduce((s, c) => s + (conditionMet(student.id, c.type) ? c.amount : 0), 0);
-                    const basicMet = basicConditions.filter(c => conditionMet(student.id, c.type)).length;
                     const bonusMet = bonusConditions.filter(c => conditionMet(student.id, c.type)).length;
 
                     return (
                       <tr key={student.id} style={{ borderBottom: idx < state.students.length - 1 ? '1px solid #e2e8f0' : 'none', background: idx % 2 === 0 ? '#f8fafc' : 'white' }}>
                         <td style={{ padding: '12px 14px', fontWeight: 600, color: '#374151' }}>{student.name}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, color: '#64748b' }}>{student.grade}</td>
-                        <td style={{ padding: '12px 14px', textAlign: 'center' }}>
-                          <span style={{ fontWeight: 700, color: basicEarned > 0 ? '#0369a1' : '#94a3b8' }}>
-                            {basicMet}/{basicConditions.length}
+                        <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, color: '#64748b' }}>
+                          <span style={{ fontWeight: 700, color: attendanceCount > 0 ? '#0369a1' : '#94a3b8' }}>
+                            {attendanceCount}/{total}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, color: '#64748b' }}>
+                          <span style={{ fontWeight: 700, color: homeworkCount > 0 ? '#0369a1' : '#94a3b8' }}>
+                            {homeworkCount}/{total}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'center', fontSize: 12, color: '#64748b' }}>
+                          <span style={{ fontWeight: 700, color: testCount > 0 ? '#0369a1' : '#94a3b8' }}>
+                            {testCount}/{total}
                           </span>
                         </td>
                         {bonusConditions.length > 0 && (
