@@ -26,6 +26,8 @@ function CheckInContent() {
   const [notFound, setNotFound] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState<typeof state.students[0] | null>(null);
   const [now, setNow] = useState(new Date());
+  const [checkType, setCheckType] = useState<'checkin' | 'checkout'>('checkin');
+  const [registeredTime, setRegisteredTime] = useState('');
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -71,26 +73,40 @@ function CheckInContent() {
   };
 
   const confirmCheckIn = () => {
-    if (!selectedStudent || alreadyChecked) return;
+    if (!selectedStudent) return;
     const actual = new Date();
     const actualDate = localDateStr(actual);
     const actualTime = localTimeStr(actual);
-    const actualDayKey = ['sun','mon','tue','wed','thu','fri','sat'][actual.getDay()];
-    const actualSchedTime = selectedStudent.scheduleTimes?.[actualDayKey] || selectedStudent.scheduleTime || '';
-    const actualLate = actualSchedTime ? actualTime > actualSchedTime : false;
-    dispatch({
-      type: 'ADD_ATTENDANCE',
-      payload: {
-        id: `a${Date.now()}`,
-        studentId: selectedStudent.id,
-        studentName: selectedStudent.name,
-        classGroup: selectedStudent.classGroup,
-        date: actualDate,
-        checkInTime: actualTime,
 
-        status: actualLate ? 'late' : 'present',
-      },
-    });
+    if (checkType === 'checkin') {
+      if (alreadyChecked) return;
+      const actualDayKey = ['sun','mon','tue','wed','thu','fri','sat'][actual.getDay()];
+      const actualSchedTime = selectedStudent.scheduleTimes?.[actualDayKey] || selectedStudent.scheduleTime || '';
+      const actualLate = actualSchedTime ? actualTime > actualSchedTime : false;
+      dispatch({
+        type: 'ADD_ATTENDANCE',
+        payload: {
+          id: `a${Date.now()}`,
+          studentId: selectedStudent.id,
+          studentName: selectedStudent.name,
+          classGroup: selectedStudent.classGroup,
+          date: actualDate,
+          checkInTime: actualTime,
+          status: actualLate ? 'late' : 'present',
+        },
+      });
+    } else {
+      // checkout
+      if (!alreadyChecked) return;
+      dispatch({
+        type: 'UPDATE_ATTENDANCE',
+        payload: {
+          ...alreadyChecked,
+          checkOutTime: actualTime,
+        },
+      });
+    }
+    setRegisteredTime(actualTime);
     setStep('done');
   };
 
@@ -99,7 +115,8 @@ function CheckInContent() {
     setNameInput('');
     setSelectedStudent(null);
     setNotFound(false);
-
+    setCheckType('checkin');
+    setRegisteredTime('');
   };
 
   const matches = state.students.filter(s => s.name === nameInput.trim());
@@ -205,33 +222,76 @@ function CheckInContent() {
             <div style={{ fontSize: 24, fontWeight: 800, marginBottom: 4 }}>{selectedStudent.name}</div>
             <div style={{ fontSize: 14, color: '#64748b', marginBottom: 24 }}>{selectedStudent.grade} · {selectedStudent.classGroup}</div>
 
-            {alreadyChecked ? (
-              <div style={{ background: '#f0fdf4', borderRadius: 14, padding: 16, marginBottom: 20 }}>
-                <CheckCircle size={28} color="#16a34a" style={{ display: 'block', margin: '0 auto 8px' }} />
-                <div style={{ fontWeight: 700, fontSize: 15, color: '#15803d' }}>이미 출석 체크됨</div>
-                <div style={{ fontSize: 13, color: '#64748b', marginTop: 4 }}>{alreadyChecked.checkInTime} {alreadyChecked.status === 'late' ? '지각' : '출석'}</div>
-              </div>
-            ) : (
-              <div style={{ background: isLate ? '#fffbeb' : '#f0fdf4', borderRadius: 14, padding: 16, marginBottom: 20 }}>
-                {isLate
-                  ? <Clock size={28} color="#d97706" style={{ display: 'block', margin: '0 auto 8px' }} />
-                  : <CheckCircle size={28} color="#16a34a" style={{ display: 'block', margin: '0 auto 8px' }} />}
-                <div style={{ fontWeight: 700, fontSize: 15, color: isLate ? '#92400e' : '#15803d' }}>
-                  {isLate ? '지각 처리됩니다' : '출석 처리됩니다'}
+            {!alreadyChecked && (
+              <div style={{ marginBottom: 20 }}>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#64748b', marginBottom: 10 }}>유형 선택</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
+                  <button
+                    onClick={() => setCheckType('checkin')}
+                    style={{
+                      padding: '12px', borderRadius: 10, border: `2px solid ${checkType === 'checkin' ? '#22c55e' : '#e2e8f0'}`,
+                      background: checkType === 'checkin' ? '#f0fdf4' : 'white',
+                      color: checkType === 'checkin' ? '#15803d' : '#64748b',
+                      cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                    }}
+                  >
+                    입실 체크
+                  </button>
+                  <button
+                    onClick={() => setCheckType('checkout')}
+                    style={{
+                      padding: '12px', borderRadius: 10, border: `2px solid ${checkType === 'checkout' ? '#0ea5e9' : '#e2e8f0'}`,
+                      background: checkType === 'checkout' ? '#ecf9ff' : 'white',
+                      color: checkType === 'checkout' ? '#0369a1' : '#64748b',
+                      cursor: 'pointer', fontWeight: 700, fontSize: 14,
+                    }}
+                  >
+                    퇴실 체크
+                  </button>
                 </div>
-                <div style={{ fontSize: 22, fontWeight: 900, marginTop: 6 }}>{timeStr}</div>
               </div>
             )}
+
+            <div style={{
+              background: checkType === 'checkin' ? (isLate ? '#fffbeb' : '#f0fdf4') : '#ecf9ff',
+              borderRadius: 14, padding: 16, marginBottom: 20
+            }}>
+              {checkType === 'checkin' ? (
+                <>
+                  {isLate
+                    ? <Clock size={28} color="#d97706" style={{ display: 'block', margin: '0 auto 8px' }} />
+                    : <CheckCircle size={28} color="#16a34a" style={{ display: 'block', margin: '0 auto 8px' }} />}
+                  <div style={{ fontWeight: 700, fontSize: 15, color: isLate ? '#92400e' : '#15803d' }}>
+                    {alreadyChecked ? '이미 입실됨' : (isLate ? '지각 처리됩니다' : '출석 처리됩니다')}
+                  </div>
+                </>
+              ) : (
+                <>
+                  <CheckCircle size={28} color="#0369a1" style={{ display: 'block', margin: '0 auto 8px' }} />
+                  <div style={{ fontWeight: 700, fontSize: 15, color: '#0369a1' }}>
+                    {alreadyChecked ? '퇴실 처리됩니다' : '먼저 입실해주세요'}
+                  </div>
+                </>
+              )}
+              <div style={{ fontSize: 22, fontWeight: 900, marginTop: 6 }}>{timeStr}</div>
+            </div>
 
             <div style={{ display: 'flex', gap: 10 }}>
               <button onClick={reset} style={{ flex: 1, padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600, fontSize: 14 }}>
                 뒤로
               </button>
-              {!alreadyChecked && (
-                <button onClick={confirmCheckIn} style={{ flex: 2, padding: '12px', borderRadius: 10, border: 'none', background: isLate ? '#f59e0b' : '#22c55e', color: 'white', cursor: 'pointer', fontWeight: 800, fontSize: 15 }}>
-                  출석 완료!
-                </button>
-              )}
+              <button
+                onClick={confirmCheckIn}
+                disabled={checkType === 'checkout' && !alreadyChecked}
+                style={{
+                  flex: 2, padding: '12px', borderRadius: 10, border: 'none',
+                  background: (checkType === 'checkout' && !alreadyChecked) ? '#e2e8f0' : (checkType === 'checkin' ? (isLate ? '#f59e0b' : '#22c55e') : '#0ea5e9'),
+                  color: 'white', cursor: (checkType === 'checkout' && !alreadyChecked) ? 'default' : 'pointer',
+                  fontWeight: 800, fontSize: 15
+                }}
+              >
+                {checkType === 'checkin' ? '입실 완료!' : '퇴실 완료!'}
+              </button>
             </div>
           </div>
         )}
@@ -239,14 +299,31 @@ function CheckInContent() {
         {/* STEP: 완료 */}
         {step === 'done' && selectedStudent && (
           <div style={{ padding: '36px 20px', textAlign: 'center' }}>
-            <div style={{ width: 80, height: 80, borderRadius: '50%', background: isLate ? '#fef3c7' : '#d1fae5', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px', animation: 'fadeUp 0.3s ease' }}>
-              {isLate ? <Clock size={40} color="#d97706" /> : <CheckCircle size={40} color="#16a34a" />}
+            <div style={{
+              width: 80, height: 80, borderRadius: '50%',
+              background: checkType === 'checkin' ? (isLate ? '#fef3c7' : '#d1fae5') : '#dbeafe',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              margin: '0 auto 16px', animation: 'fadeUp 0.3s ease'
+            }}>
+              {checkType === 'checkin' ? (
+                isLate ? <Clock size={40} color="#d97706" /> : <CheckCircle size={40} color="#16a34a" />
+              ) : (
+                <CheckCircle size={40} color="#0369a1" />
+              )}
             </div>
             <div style={{ fontSize: 24, fontWeight: 900, marginBottom: 6 }}>
-              {isLate ? '지각 처리 완료' : '출석 완료! 🎉'}
+              {checkType === 'checkin'
+                ? (isLate ? '지각 처리 완료' : '입실 완료! ✓')
+                : '퇴실 완료! ✓'}
             </div>
             <div style={{ fontSize: 16, color: '#374151', marginBottom: 4 }}>{selectedStudent.name}</div>
-            <div style={{ fontSize: 20, fontWeight: 800, color: isLate ? '#d97706' : '#16a34a', marginBottom: 24 }}>{timeStr}</div>
+            <div style={{
+              fontSize: 20, fontWeight: 800,
+              color: checkType === 'checkin' ? (isLate ? '#d97706' : '#16a34a') : '#0369a1',
+              marginBottom: 24
+            }}>
+              {registeredTime}
+            </div>
             <button onClick={reset} style={{ padding: '12px 28px', borderRadius: 10, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 600 }}>
               다음 학생
             </button>
