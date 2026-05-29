@@ -797,7 +797,7 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 학생별 보충 현황 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '60px 40px 45px 45px 45px 50px 50px', gap: 4, marginBottom: 10, alignItems: 'center', fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: '70px 45px 90px 90px 90px 60px 60px', gap: 4, marginBottom: 10, alignItems: 'center', fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>
                   <div>학생</div>
                   <div style={{ textAlign: 'center' }}>결석</div>
                   <div style={{ textAlign: 'center', background: '#fef3c7', padding: 4, borderRadius: 4 }}>주간</div>
@@ -834,7 +834,7 @@ export default function AdminDashboard() {
                     }, 0);
 
                   return (
-                    <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '60px 40px 45px 45px 45px 50px 50px', gap: 4, marginBottom: 6, alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc', fontSize: 12, fontWeight: 600 }}>
+                    <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '70px 45px 90px 90px 90px 60px 60px', gap: 4, marginBottom: 6, alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc', fontSize: 12, fontWeight: 600 }}>
                       <div style={{ ...NAME_CELL }}>{s.name}</div>
                       <div style={{ textAlign: 'center', color: '#ef4444' }}>{absentDays}일</div>
 
