@@ -885,7 +885,7 @@ export default function AdminDashboard() {
                             onChange={e => setStudentMonthlyOverride(prev => ({ ...prev, [s.id]: Number(e.target.value) || 0 }))}
                             onBlur={() => setEditingHours(null)}
                             autoFocus
-                            style={{ width: 30, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 700, color: '#dc2626' }}
+                            style={{ width: 80, fontSize: 11, fontWeight: 800, border: '2px solid #dc2626', background: '#fecaca', textAlign: 'center', color: '#dc2626', padding: '6px 8px', borderRadius: 4 }}
                           />
                         ) : (
                           `${studentMonthlyOverride[s.id] ?? studentMonthlyAbsent}시간`
@@ -912,7 +912,7 @@ export default function AdminDashboard() {
                             onChange={e => setStudentTotalOverride(prev => ({ ...prev, [s.id]: Number(e.target.value) || 0 }))}
                             onBlur={() => setEditingHours(null)}
                             autoFocus
-                            style={{ width: 30, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 700, color: '#1d4ed8' }}
+                            style={{ width: 80, fontSize: 11, fontWeight: 800, border: '2px solid #1d4ed8', background: '#dbeafe', textAlign: 'center', color: '#1d4ed8', padding: '6px 8px', borderRadius: 4 }}
                           />
                         ) : (
                           `${studentTotalOverride[s.id] ?? absentDays}시간`
