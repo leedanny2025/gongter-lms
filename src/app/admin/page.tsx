@@ -858,7 +858,7 @@ export default function AdminDashboard() {
                             onChange={e => setStudentWeeklyOverride(prev => ({ ...prev, [s.id]: Number(e.target.value) || 0 }))}
                             onBlur={() => setEditingHours(null)}
                             autoFocus
-                            style={{ width: 45, fontSize: 12, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 700, color: '#b45309', padding: '2px 4px' }}
+                            style={{ width: 50, fontSize: 14, fontWeight: 800, border: '2px solid #b45309', background: '#fffbeb', textAlign: 'center', color: '#b45309', padding: '4px 6px', borderRadius: 4 }}
                           />
                         ) : (
                           `${studentWeeklyOverride[s.id] ?? studentWeeklyAbsent}시간`
