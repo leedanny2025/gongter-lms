@@ -45,6 +45,7 @@ type Action =
   | { type: 'UPDATE_SHOP_ITEM'; payload: ShopItem }
   | { type: 'DELETE_SHOP_ITEM'; payload: string }
   | { type: 'ADD_PURCHASE'; payload: PurchaseRecord }
+  | { type: 'DELETE_PURCHASE'; payload: string }
   | { type: '_SET'; payload: Partial<AppData> };
 
 function toArr<T>(val: unknown): T[] {
@@ -110,6 +111,14 @@ function reducer(state: AppData, action: Action): AppData {
       purchases: [...(state.purchases || []), action.payload],
       students: state.students.map(s => s.id === action.payload.studentId ? { ...s, dollars: Math.max(0, s.dollars - action.payload.cost) } : s),
     };
+    case 'DELETE_PURCHASE': {
+      const purchase = (state.purchases || []).find(p => p.id === action.payload);
+      return {
+        ...state,
+        purchases: (state.purchases || []).filter(p => p.id !== action.payload),
+        students: state.students.map(s => s.id === purchase?.studentId ? { ...s, dollars: s.dollars + (purchase?.cost || 0) } : s),
+      };
+    }
     case 'SET_WEEK': return { ...state, currentWeek: action.payload };
     case 'WEEK_RESET': return {
       ...state,
@@ -425,6 +434,15 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         fbSet(`lms/purchases/${action.payload.id}`, action.payload);
         const buyer = s.students.find(x => x.id === action.payload.studentId);
         if (buyer) { const u = { ...buyer, dollars: Math.max(0, buyer.dollars - action.payload.cost) }; fbSet(`lms/students/${buyer.id}`, u); }
+        break;
+      }
+      case 'DELETE_PURCHASE': {
+        const purchase = s.purchases.find(p => p.id === action.payload);
+        if (purchase) {
+          fbDelete(`lms/purchases/${action.payload}`);
+          const buyer = s.students.find(x => x.id === purchase.studentId);
+          if (buyer) { const u = { ...buyer, dollars: buyer.dollars + purchase.cost }; fbSet(`lms/students/${buyer.id}`, u); }
+        }
         break;
       }
     }

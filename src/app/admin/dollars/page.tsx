@@ -797,9 +797,21 @@ export default function DollarsPage() {
                           <div style={{ fontSize: 12, color: '#64748b' }}>{p.itemName}</div>
                         </div>
                       </div>
-                      <div style={{ textAlign: 'right' }}>
-                        <div style={{ fontWeight: 900, fontSize: 16, color: '#dc2626' }}>-${p.cost}</div>
-                        <div style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(p.purchasedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ textAlign: 'right' }}>
+                          <div style={{ fontWeight: 900, fontSize: 16, color: '#dc2626' }}>-${p.cost}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(p.purchasedAt).toLocaleDateString('ko-KR', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (confirm(`${p.studentName}의 ${p.itemName} 구매를 취소하시겠습니까?\n(+$${p.cost} 환급)`)) {
+                              dispatch({ type: 'DELETE_PURCHASE', payload: p.id });
+                            }
+                          }}
+                          style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#f87171', padding: '4px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                        >
+                          <Trash2 size={16} />
+                        </button>
                       </div>
                     </div>
                   ))}
