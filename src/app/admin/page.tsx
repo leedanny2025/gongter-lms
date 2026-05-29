@@ -243,7 +243,7 @@ export default function AdminDashboard() {
   const [testEditDate, setTestEditDate] = useState('');
   const [makeupHours, setMakeupHours] = useState<Record<string, number>>(
     state.students.reduce((acc, s) => {
-      acc[s.id] = s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length * 2);
+      acc[s.id] = s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length);
       return acc;
     }, {} as Record<string, number>)
   );
@@ -407,7 +407,7 @@ export default function AdminDashboard() {
           state.attendanceRecords.some(a => a.studentId === s.id && a.status === 'absent')
         ).length;
         const makeupCompleted = state.students.filter(s => {
-          const requiredHours = s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length * 2);
+          const requiredHours = s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length);
           const completedHours = (state.makeupRequests || [])
             .filter(m => m.studentId === s.id && m.status === 'approved')
             .reduce((sum, m) => {
@@ -758,10 +758,10 @@ export default function AdminDashboard() {
 
             state.attendanceRecords.forEach(a => {
               if (a.status === 'absent') {
-                totalAbsentHours += 2;
+                totalAbsentHours += 1;
                 const attDate = new Date(a.date + 'T12:00:00');
-                if (attDate >= weekStart) weeklyAbsentHours += 2;
-                if (attDate >= monthStart) monthlyAbsentHours += 2;
+                if (attDate >= weekStart) weeklyAbsentHours += 1;
+                if (attDate >= monthStart) monthlyAbsentHours += 1;
               }
             });
 
@@ -839,7 +839,7 @@ export default function AdminDashboard() {
                               setTimeout(() => setMakeupHoursSaved(prev => ({ ...prev, [s.id]: false })), 2000);
                             }} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#22c55e', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>✓</button>
                             <button onClick={() => {
-                              setMakeupHours(prev => ({ ...prev, [s.id]: s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length * 2) }));
+                              setMakeupHours(prev => ({ ...prev, [s.id]: s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length) }));
                               setMakeupHoursEditMode(prev => ({ ...prev, [s.id]: false }));
                             }} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#e2e8f0', color: '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>✕</button>
                           </>
