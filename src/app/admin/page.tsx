@@ -740,10 +740,28 @@ export default function AdminDashboard() {
 
           {(() => {
             const studentAbsentDays: Record<string, number> = {};
+            let weeklyAbsentHours = 0;
+            let monthlyAbsentHours = 0;
+            let totalAbsentHours = 0;
+
+            const now = new Date();
+            const weekStart = new Date(now);
+            weekStart.setDate(now.getDate() - now.getDay() + 1);
+            const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+
             state.students.forEach(s => {
               const absentCount = state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length;
               if (absentCount > 0) {
                 studentAbsentDays[s.id] = absentCount;
+              }
+            });
+
+            state.attendanceRecords.forEach(a => {
+              if (a.status === 'absent') {
+                totalAbsentHours += 2;
+                const attDate = new Date(a.date + 'T12:00:00');
+                if (attDate >= weekStart) weeklyAbsentHours += 2;
+                if (attDate >= monthStart) monthlyAbsentHours += 2;
               }
             });
 
@@ -755,6 +773,25 @@ export default function AdminDashboard() {
 
             return (
               <>
+                {/* 보충 통계 */}
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 16 }}>
+                  <div style={{ background: '#fef3c7', borderRadius: 8, padding: 12, border: '1px solid #fcd34d' }}>
+                    <div style={{ fontSize: 11, color: '#92400e', fontWeight: 600, marginBottom: 4 }}>📅 주간</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#b45309' }}>{weeklyAbsentHours}시간</div>
+                    <div style={{ fontSize: 10, color: '#92400e', marginTop: 4 }}>이번 주 필요</div>
+                  </div>
+                  <div style={{ background: '#fecaca', borderRadius: 8, padding: 12, border: '1px solid #fca5a5' }}>
+                    <div style={{ fontSize: 11, color: '#7f1d1d', fontWeight: 600, marginBottom: 4 }}>📆 월간</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#dc2626' }}>{monthlyAbsentHours}시간</div>
+                    <div style={{ fontSize: 10, color: '#7f1d1d', marginTop: 4 }}>이번 달 필요</div>
+                  </div>
+                  <div style={{ background: '#dbeafe', borderRadius: 8, padding: 12, border: '1px solid #bfdbfe' }}>
+                    <div style={{ fontSize: 11, color: '#1e3a8a', fontWeight: 600, marginBottom: 4 }}>📊 전체</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: '#1d4ed8' }}>{totalAbsentHours}시간</div>
+                    <div style={{ fontSize: 10, color: '#1e3a8a', marginTop: 4 }}>누적 필요</div>
+                  </div>
+                </div>
+
                 {/* 학생별 보충 현황 */}
                 <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: 4, marginBottom: 10, alignItems: 'center' }}>
                   <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>학생</div>
