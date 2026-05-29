@@ -793,16 +793,31 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 학생별 보충 현황 */}
-                <div style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: 4, marginBottom: 10, alignItems: 'center' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>학생</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>결석</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>필요시간</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>완료시간</div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textAlign: 'center' }}>상태</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '60px 40px 45px 45px 45px 50px 50px', gap: 4, marginBottom: 10, alignItems: 'center', fontSize: 10, fontWeight: 700, color: '#94a3b8' }}>
+                  <div>학생</div>
+                  <div style={{ textAlign: 'center' }}>결석</div>
+                  <div style={{ textAlign: 'center', background: '#fef3c7', padding: 4, borderRadius: 4 }}>주간</div>
+                  <div style={{ textAlign: 'center', background: '#fecaca', padding: 4, borderRadius: 4 }}>월간</div>
+                  <div style={{ textAlign: 'center', background: '#dbeafe', padding: 4, borderRadius: 4 }}>전체</div>
+                  <div style={{ textAlign: 'center' }}>완료</div>
+                  <div style={{ textAlign: 'center' }}>상태</div>
                 </div>
 
                 {studentsNeedingMakeup.map(s => {
                   const absentDays = studentAbsentDays[s.id] || 0;
+
+                  const studentWeeklyAbsent = state.attendanceRecords.filter(a => {
+                    if (a.studentId !== s.id || a.status !== 'absent') return false;
+                    const attDate = new Date(a.date + 'T12:00:00');
+                    return attDate >= weekStart;
+                  }).length;
+
+                  const studentMonthlyAbsent = state.attendanceRecords.filter(a => {
+                    if (a.studentId !== s.id || a.status !== 'absent') return false;
+                    const attDate = new Date(a.date + 'T12:00:00');
+                    return attDate >= monthStart;
+                  }).length;
+
                   const requiredHours = makeupHours[s.id] || 0;
                   const completedHours = (state.makeupRequests || [])
                     .filter(m => m.studentId === s.id && m.status === 'approved')
@@ -815,46 +830,16 @@ export default function AdminDashboard() {
                     }, 0);
 
                   return (
-                    <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '80px repeat(4, 1fr)', gap: 4, marginBottom: 6, alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc' }}>
-                      <div style={{ ...NAME_CELL, fontWeight: 600 }}>{s.name}</div>
-                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: '#ef4444' }}>{absentDays}일</div>
-                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
-                        {makeupHoursEditMode[s.id] ? (
-                          <>
-                            <input
-                              type="number"
-                              value={requiredHours}
-                              onChange={e => {
-                                const newHours = Math.max(0, Number(e.target.value) || 0);
-                                setMakeupHours(prev => ({ ...prev, [s.id]: newHours }));
-                              }}
-                              min="0"
-                              autoFocus
-                              style={{ width: 40, fontSize: 12, padding: '4px 6px', textAlign: 'center', borderRadius: 6, border: '2px solid #6366f1', fontWeight: 700 }}
-                            />
-                            <button onClick={() => {
-                              dispatch({ type: 'UPDATE_STUDENT', payload: { ...s, makeupHoursRequired: requiredHours } });
-                              setMakeupHoursEditMode(prev => ({ ...prev, [s.id]: false }));
-                              setMakeupHoursSaved(prev => ({ ...prev, [s.id]: true }));
-                              setTimeout(() => setMakeupHoursSaved(prev => ({ ...prev, [s.id]: false })), 2000);
-                            }} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#22c55e', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>✓</button>
-                            <button onClick={() => {
-                              setMakeupHours(prev => ({ ...prev, [s.id]: s.makeupHoursRequired ?? (state.attendanceRecords.filter(a => a.studentId === s.id && a.status === 'absent').length) }));
-                              setMakeupHoursEditMode(prev => ({ ...prev, [s.id]: false }));
-                            }} style={{ padding: '4px 8px', borderRadius: 6, border: 'none', background: '#e2e8f0', color: '#64748b', cursor: 'pointer', fontWeight: 700, fontSize: 11 }}>✕</button>
-                          </>
-                        ) : (
-                          <>
-                            {requiredHours}시간
-                            <button onClick={() => setMakeupHoursEditMode(prev => ({ ...prev, [s.id]: true }))} style={{ padding: '2px 6px', borderRadius: 4, border: 'none', background: '#f1f5f9', color: '#64748b', cursor: 'pointer', fontWeight: 600, fontSize: 10, marginLeft: 2 }}>수정</button>
-                            {makeupHoursSaved[s.id] && <span style={{ color: '#22c55e', fontWeight: 700, fontSize: 12 }}>✓</span>}
-                          </>
-                        )}
-                      </div>
-                      <div style={{ textAlign: 'center', fontSize: 13, fontWeight: 700, color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
+                    <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '60px 40px 45px 45px 45px 50px 50px', gap: 4, marginBottom: 6, alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc', fontSize: 12, fontWeight: 600 }}>
+                      <div style={{ ...NAME_CELL }}>{s.name}</div>
+                      <div style={{ textAlign: 'center', color: '#ef4444' }}>{absentDays}일</div>
+                      <div style={{ textAlign: 'center', background: '#fef3c7', padding: 4, borderRadius: 4, color: '#b45309' }}>{studentWeeklyAbsent}시간</div>
+                      <div style={{ textAlign: 'center', background: '#fecaca', padding: 4, borderRadius: 4, color: '#dc2626' }}>{studentMonthlyAbsent}시간</div>
+                      <div style={{ textAlign: 'center', background: '#dbeafe', padding: 4, borderRadius: 4, color: '#1d4ed8' }}>{absentDays}시간</div>
+                      <div style={{ textAlign: 'center', color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
                         {completedHours}시간
                       </div>
-                      <div style={{ textAlign: 'center', fontSize: 12, fontWeight: 700, color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
+                      <div style={{ textAlign: 'center', color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
                         {completedHours >= requiredHours ? '✅ 완료' : `⏳ ${requiredHours - completedHours}시간`}
                       </div>
                     </div>
