@@ -428,7 +428,7 @@ export default function AdminDashboard() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 12, marginBottom: 20 }}>
             <StatCard title="전체 학생" value={state.students.length} sub="등록된 학생 수" icon={Users} color="#3b82f6" />
             <StatCard title="오늘 출석" value={todayAtt.length} sub={`/ ${state.students.length}명`} icon={Calendar} color="#22c55e" />
-            <StatCard title="승인 대기" value={pendingHW + pendingTests} sub={`숙제 ${pendingHW} / 시험 ${pendingTests}`} icon={Clock} color="#f59e0b" href="/admin/homework" />
+            <StatCard title="승인 대기" value={pendingHW + pendingTests} sub={`숙제 ${pendingHW} / 시험 ${pendingTests}`} icon={Clock} color="#f59e0b" href={pendingTests > 0 ? "/admin/tests" : "/admin/homework"} />
             <StatCard title="총 달러" value={`$${totalDollars}`} sub="전체 지급 누계" icon={DollarSign} color="#8b5cf6" />
             <StatCard title="보충 필요" value={studentsNeedingMakeup} sub="명의 학생" icon={Clock} color="#ef4444" onClick={() => makeupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
             <StatCard title="보충 완료" value={makeupCompleted} sub={`/ ${studentsNeedingMakeup}명`} icon={CheckCircle} color="#22c55e" onClick={() => makeupSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })} />
