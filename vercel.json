@@ -3,6 +3,10 @@
     {
       "path": "/api/cron/week-reset",
       "schedule": "0 15 * * 6"
+    },
+    {
+      "path": "/api/cron/daily-absence-check",
+      "schedule": "0 19 * * *"
     }
   ]
 }
