@@ -892,31 +892,20 @@ export default function AdminDashboard() {
                         )}
                       </div>
 
-                      {/* 전체 */}
+                      {/* 전체 - 읽기 전용 */}
                       <div
-                        onClick={() => setEditingHours(`${s.id}-total`)}
                         style={{
                           textAlign: 'center',
-                          background: editingHours === `${s.id}-total` ? 'white' : '#dbeafe',
+                          background: '#dbeafe',
                           padding: 4,
                           borderRadius: 4,
                           color: '#1d4ed8',
-                          cursor: 'pointer',
-                          border: editingHours === `${s.id}-total` ? '2px solid #1d4ed8' : 'none',
+                          cursor: 'not-allowed',
+                          border: 'none',
+                          fontWeight: 800,
                         }}
                       >
-                        {editingHours === `${s.id}-total` ? (
-                          <input
-                            type="number"
-                            value={studentTotalOverride[s.id] ?? absentDays}
-                            onChange={e => setStudentTotalOverride(prev => ({ ...prev, [s.id]: Number(e.target.value) || 0 }))}
-                            onBlur={() => setEditingHours(null)}
-                            autoFocus
-                            style={{ width: 80, fontSize: 11, fontWeight: 800, border: '2px solid #1d4ed8', background: '#dbeafe', textAlign: 'center', color: '#1d4ed8', padding: '6px 8px', borderRadius: 4 }}
-                          />
-                        ) : (
-                          `${studentTotalOverride[s.id] ?? absentDays}시간`
-                        )}
+                        {(studentWeeklyOverride[s.id] ?? studentWeeklyAbsent) + (studentMonthlyOverride[s.id] ?? studentMonthlyAbsent)}시간
                       </div>
 
                       <div style={{ textAlign: 'center', color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
