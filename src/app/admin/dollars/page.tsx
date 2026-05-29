@@ -27,10 +27,12 @@ export default function DollarsPage() {
   const [newItemCost, setNewItemCost] = useState('');
   const [purchaseStudentId, setPurchaseStudentId] = useState<string>('');
   const [purchaseItemId, setPurchaseItemId] = useState<string>('');
-  const [purchaseSummary, setPurchaseSummary] = useState<{ name: string; item: string; cost: number } | null>(null);
+  const [purchaseQuantity, setPurchaseQuantity] = useState(1);
+  const [purchaseSummary, setPurchaseSummary] = useState<{ name: string; item: string; cost: number; quantity: number; total: number } | null>(null);
   const [purchaseMode, setPurchaseMode] = useState<'list' | 'direct'>('list');
   const [directItemName, setDirectItemName] = useState('');
   const [directItemCost, setDirectItemCost] = useState('');
+  const [directQuantity, setDirectQuantity] = useState(1);
   const [purchasePage, setPurchasePage] = useState(1);
 
   const PAGE_SIZE = 10;
@@ -170,10 +172,12 @@ export default function DollarsPage() {
   const processPurchase = () => {
     if (!purchaseStudentId) return alert('학생 선택');
     if (!purchaseItemId) return alert('상품 선택');
+    if (purchaseQuantity < 1) return alert('수량은 1개 이상이어야 합니다');
     const student = state.students.find(s => s.id === purchaseStudentId);
     const item = shopItems.find(i => i.id === purchaseItemId);
     if (!student || !item) return;
-    if (student.dollars < item.cost) return alert(`달러가 부족합니다 (보유: $${student.dollars}, 필요: $${item.cost})`);
+    const totalCost = item.cost * purchaseQuantity;
+    if (student.dollars < totalCost) return alert(`달러가 부족합니다 (보유: $${student.dollars}, 필요: $${totalCost})`);
     dispatch({
       type: 'ADD_PURCHASE',
       payload: {
@@ -182,13 +186,14 @@ export default function DollarsPage() {
         studentName: student.name,
         itemId: item.id,
         itemName: item.name,
-        cost: item.cost,
+        cost: totalCost,
         purchasedAt: new Date().toISOString(),
       },
     });
-    setPurchaseSummary({ name: student.name, item: item.name, cost: item.cost });
+    setPurchaseSummary({ name: student.name, item: item.name, cost: totalCost, quantity: purchaseQuantity, total: totalCost });
     setPurchaseStudentId('');
     setPurchaseItemId('');
+    setPurchaseQuantity(1);
   };
 
   const processDirectPurchase = () => {
@@ -197,9 +202,11 @@ export default function DollarsPage() {
     const cost = Number(directItemCost);
     if (!name) return alert('상품명 입력');
     if (!cost || cost <= 0) return alert('가격 입력');
+    if (directQuantity < 1) return alert('수량은 1개 이상이어야 합니다');
     const student = state.students.find(s => s.id === purchaseStudentId);
     if (!student) return;
-    if (student.dollars < cost) return alert(`달러가 부족합니다 (보유: $${student.dollars}, 필요: $${cost})`);
+    const totalCost = cost * directQuantity;
+    if (student.dollars < totalCost) return alert(`달러가 부족합니다 (보유: $${student.dollars}, 필요: $${totalCost})`);
     dispatch({
       type: 'ADD_PURCHASE',
       payload: {
@@ -208,13 +215,14 @@ export default function DollarsPage() {
         studentName: student.name,
         itemId: 'direct',
         itemName: name,
-        cost,
+        cost: totalCost,
         purchasedAt: new Date().toISOString(),
       },
     });
-    setPurchaseSummary({ name: student.name, item: name, cost });
+    setPurchaseSummary({ name: student.name, item: name, cost: totalCost, quantity: directQuantity, total: totalCost });
     setDirectItemName('');
     setDirectItemCost('');
+    setDirectQuantity(1);
   };
 
   return (
@@ -612,7 +620,7 @@ export default function DollarsPage() {
                         return (
                           <button
                             key={item.id}
-                            onClick={() => { setPurchaseItemId(selected ? '' : item.id); setPurchaseSummary(null); }}
+                            onClick={() => { setPurchaseItemId(selected ? '' : item.id); setPurchaseSummary(null); setPurchaseQuantity(1); }}
                             style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 14px', borderRadius: 8, border: `2px solid ${selected ? '#0284c7' : '#e2e8f0'}`, background: selected ? '#e0f2fe' : 'white', cursor: 'pointer', textAlign: 'left' }}
                           >
                             <span style={{ fontWeight: 600, fontSize: 13, color: selected ? '#0369a1' : '#374151' }}>{item.name}</span>
@@ -620,6 +628,33 @@ export default function DollarsPage() {
                           </button>
                         );
                       })}
+                    </div>
+                  )}
+                  {purchaseItemId && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #e2e8f0' }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>수량</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <button
+                          onClick={() => setPurchaseQuantity(Math.max(1, purchaseQuantity - 1))}
+                          style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >−</button>
+                        <input
+                          type="number"
+                          value={purchaseQuantity}
+                          onChange={e => setPurchaseQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                          min="1"
+                          style={{ width: 50, fontSize: 14, padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 700 }}
+                        />
+                        <button
+                          onClick={() => setPurchaseQuantity(purchaseQuantity + 1)}
+                          style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                        >+</button>
+                        {purchaseItemId && (
+                          <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 13, color: '#0284c7' }}>
+                            ${((shopItems.find(i => i.id === purchaseItemId)?.cost ?? 0) * purchaseQuantity)}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
@@ -641,6 +676,31 @@ export default function DollarsPage() {
                     placeholder="달러 가격"
                     style={{ fontSize: 14, padding: '8px 12px', borderRadius: 8, border: '1px solid #e2e8f0' }}
                   />
+                  <div>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', marginBottom: 6 }}>수량</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <button
+                        onClick={() => setDirectQuantity(Math.max(1, directQuantity - 1))}
+                        style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >−</button>
+                      <input
+                        type="number"
+                        value={directQuantity}
+                        onChange={e => setDirectQuantity(Math.max(1, parseInt(e.target.value) || 1))}
+                        min="1"
+                        style={{ width: 50, fontSize: 14, padding: '8px 10px', borderRadius: 6, border: '1px solid #e2e8f0', textAlign: 'center', fontWeight: 700 }}
+                      />
+                      <button
+                        onClick={() => setDirectQuantity(directQuantity + 1)}
+                        style={{ width: 32, height: 32, borderRadius: 6, border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 14, color: '#374151', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+                      >+</button>
+                      {directItemCost && (
+                        <span style={{ marginLeft: 'auto', fontWeight: 700, fontSize: 13, color: '#0284c7' }}>
+                          ${Number(directItemCost) * directQuantity}
+                        </span>
+                      )}
+                    </div>
+                  </div>
                 </div>
               )}
 
@@ -648,17 +708,22 @@ export default function DollarsPage() {
               {purchaseStudentId && (purchaseMode === 'list' ? purchaseItemId : directItemName && directItemCost) && (() => {
                 const student = state.students.find(s => s.id === purchaseStudentId);
                 if (!student) return null;
-                const cost = purchaseMode === 'list'
+                const unitCost = purchaseMode === 'list'
                   ? (shopItems.find(i => i.id === purchaseItemId)?.cost ?? 0)
                   : Number(directItemCost);
-                if (!cost) return null;
-                const canAfford = student.dollars >= cost;
+                if (!unitCost) return null;
+                const quantity = purchaseMode === 'list' ? purchaseQuantity : directQuantity;
+                const totalCost = unitCost * quantity;
+                const canAfford = student.dollars >= totalCost;
                 return (
                   <div style={{ background: canAfford ? '#f0f9ff' : '#fef2f2', borderRadius: 8, padding: '8px 12px', fontSize: 13, border: `1px solid ${canAfford ? '#bae6fd' : '#fecaca'}`, marginBottom: 8 }}>
-                    <span style={{ color: canAfford ? '#0369a1' : '#dc2626', fontWeight: 600 }}>
-                      {student.name} · 보유 ${student.dollars} → 구매 후 ${Math.max(0, student.dollars - cost)}
+                    <div style={{ color: canAfford ? '#0369a1' : '#dc2626', fontWeight: 600 }}>
+                      {student.name} · 보유 ${student.dollars}
+                    </div>
+                    <div style={{ color: canAfford ? '#0369a1' : '#dc2626', fontWeight: 600, marginTop: 2, fontSize: 12 }}>
+                      구매: ${unitCost} × {quantity}개 = ${totalCost} → 구매 후 ${Math.max(0, student.dollars - totalCost)}
                       {!canAfford && ' (잔액 부족)'}
-                    </span>
+                    </div>
                   </div>
                 );
               })()}
@@ -675,10 +740,15 @@ export default function DollarsPage() {
                 <div style={{ marginTop: 12, background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 10, padding: '10px 14px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
                     <div style={{ fontWeight: 700, fontSize: 13, color: '#15803d' }}>✅ 구매 완료</div>
-                    <div style={{ fontSize: 12, color: '#16a34a', marginTop: 2 }}>{purchaseSummary.name} · {purchaseSummary.item}</div>
+                    <div style={{ fontSize: 12, color: '#16a34a', marginTop: 2 }}>
+                      {purchaseSummary.name} · {purchaseSummary.item} × {purchaseSummary.quantity}개
+                    </div>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <span style={{ fontWeight: 900, fontSize: 15, color: '#dc2626' }}>-${purchaseSummary.cost}</span>
+                    <div>
+                      <div style={{ fontWeight: 900, fontSize: 15, color: '#dc2626', textAlign: 'right' }}>-${purchaseSummary.total}</div>
+                      <div style={{ fontSize: 10, color: '#16a34a', marginTop: 1, textAlign: 'right' }}></div>
+                    </div>
                     <button onClick={() => setPurchaseSummary(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8' }}><X size={14} /></button>
                   </div>
                 </div>
