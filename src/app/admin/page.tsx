@@ -249,6 +249,10 @@ export default function AdminDashboard() {
   );
   const [makeupHoursEditMode, setMakeupHoursEditMode] = useState<Record<string, boolean>>({});
   const [makeupHoursSaved, setMakeupHoursSaved] = useState<Record<string, boolean>>({});
+  const [studentWeeklyOverride, setStudentWeeklyOverride] = useState<Record<string, number>>({});
+  const [studentMonthlyOverride, setStudentMonthlyOverride] = useState<Record<string, number>>({});
+  const [studentTotalOverride, setStudentTotalOverride] = useState<Record<string, number>>({});
+  const [editingHours, setEditingHours] = useState<string | null>(null);
   const makeupSectionRef = useRef<HTMLDivElement>(null);
   const [makeupEditPopup, setMakeupEditPopup] = useState<{ req: typeof state.makeupRequests[0] } | null>(null);
   const [makeupEditStatus, setMakeupEditStatus] = useState<'completed' | 'partial' | 'postponed' | 'cancelled'>('completed');
@@ -833,9 +837,88 @@ export default function AdminDashboard() {
                     <div key={s.id} style={{ display: 'grid', gridTemplateColumns: '60px 40px 45px 45px 45px 50px 50px', gap: 4, marginBottom: 6, alignItems: 'center', padding: '8px 10px', borderRadius: 8, background: '#f8fafc', fontSize: 12, fontWeight: 600 }}>
                       <div style={{ ...NAME_CELL }}>{s.name}</div>
                       <div style={{ textAlign: 'center', color: '#ef4444' }}>{absentDays}일</div>
-                      <div style={{ textAlign: 'center', background: '#fef3c7', padding: 4, borderRadius: 4, color: '#b45309' }}>{studentWeeklyAbsent}시간</div>
-                      <div style={{ textAlign: 'center', background: '#fecaca', padding: 4, borderRadius: 4, color: '#dc2626' }}>{studentMonthlyAbsent}시간</div>
-                      <div style={{ textAlign: 'center', background: '#dbeafe', padding: 4, borderRadius: 4, color: '#1d4ed8' }}>{absentDays}시간</div>
+
+                      {/* 주간 */}
+                      <div
+                        onClick={() => setEditingHours(`${s.id}-weekly`)}
+                        style={{
+                          textAlign: 'center',
+                          background: editingHours === `${s.id}-weekly` ? 'white' : '#fef3c7',
+                          padding: 4,
+                          borderRadius: 4,
+                          color: '#b45309',
+                          cursor: 'pointer',
+                          border: editingHours === `${s.id}-weekly` ? '2px solid #b45309' : 'none',
+                        }}
+                      >
+                        {editingHours === `${s.id}-weekly` ? (
+                          <input
+                            type="number"
+                            value={studentWeeklyOverride[s.id] ?? studentWeeklyAbsent}
+                            onChange={e => setStudentWeeklyOverride(prev => ({ ...prev, [s.id]: Number(e.target.value) || 0 }))}
+                            onBlur={() => setEditingHours(null)}
+                            autoFocus
+                            style={{ width: 30, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 700, color: '#b45309' }}
+                          />
+                        ) : (
+                          `${studentWeeklyOverride[s.id] ?? studentWeeklyAbsent}시간`
+                        )}
+                      </div>
+
+                      {/* 월간 */}
+                      <div
+                        onClick={() => setEditingHours(`${s.id}-monthly`)}
+                        style={{
+                          textAlign: 'center',
+                          background: editingHours === `${s.id}-monthly` ? 'white' : '#fecaca',
+                          padding: 4,
+                          borderRadius: 4,
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          border: editingHours === `${s.id}-monthly` ? '2px solid #dc2626' : 'none',
+                        }}
+                      >
+                        {editingHours === `${s.id}-monthly` ? (
+                          <input
+                            type="number"
+                            value={studentMonthlyOverride[s.id] ?? studentMonthlyAbsent}
+                            onChange={e => setStudentMonthlyOverride(prev => ({ ...prev, [s.id]: Number(e.target.value) || 0 }))}
+                            onBlur={() => setEditingHours(null)}
+                            autoFocus
+                            style={{ width: 30, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 700, color: '#dc2626' }}
+                          />
+                        ) : (
+                          `${studentMonthlyOverride[s.id] ?? studentMonthlyAbsent}시간`
+                        )}
+                      </div>
+
+                      {/* 전체 */}
+                      <div
+                        onClick={() => setEditingHours(`${s.id}-total`)}
+                        style={{
+                          textAlign: 'center',
+                          background: editingHours === `${s.id}-total` ? 'white' : '#dbeafe',
+                          padding: 4,
+                          borderRadius: 4,
+                          color: '#1d4ed8',
+                          cursor: 'pointer',
+                          border: editingHours === `${s.id}-total` ? '2px solid #1d4ed8' : 'none',
+                        }}
+                      >
+                        {editingHours === `${s.id}-total` ? (
+                          <input
+                            type="number"
+                            value={studentTotalOverride[s.id] ?? absentDays}
+                            onChange={e => setStudentTotalOverride(prev => ({ ...prev, [s.id]: Number(e.target.value) || 0 }))}
+                            onBlur={() => setEditingHours(null)}
+                            autoFocus
+                            style={{ width: 30, border: 'none', background: 'transparent', textAlign: 'center', fontWeight: 700, color: '#1d4ed8' }}
+                          />
+                        ) : (
+                          `${studentTotalOverride[s.id] ?? absentDays}시간`
+                        )}
+                      </div>
+
                       <div style={{ textAlign: 'center', color: completedHours >= requiredHours ? '#22c55e' : '#f59e0b' }}>
                         {completedHours}시간
                       </div>
