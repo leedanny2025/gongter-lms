@@ -50,7 +50,7 @@ export default function StudentAttendancePage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* 주 선택 */}
-      <WeekSelector value={selectedWeek} onChange={setSelectedWeek} />
+      <WeekSelector week={selectedWeek} onChange={setSelectedWeek} />
 
       {/* 메인 출석 카드 */}
       <div style={{ background: 'white', borderRadius: 20, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>

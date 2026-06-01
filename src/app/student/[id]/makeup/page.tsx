@@ -83,7 +83,7 @@ export default function MakeupPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* 주 선택 */}
-      <WeekSelector value={selectedWeek} onChange={setSelectedWeek} />
+      <WeekSelector week={selectedWeek} onChange={setSelectedWeek} />
 
       {/* 이번 주 출석 현황 */}
       <div style={{ background: 'white', borderRadius: 20, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>

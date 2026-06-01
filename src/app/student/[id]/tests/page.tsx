@@ -82,7 +82,7 @@ export default function StudentTestPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       {/* 주 선택 */}
-      <WeekSelector value={selectedWeek} onChange={setSelectedWeek} />
+      <WeekSelector week={selectedWeek} onChange={setSelectedWeek} />
 
       {/* 이번 주 상태 */}
       {latestTest && step === 'form' && (
