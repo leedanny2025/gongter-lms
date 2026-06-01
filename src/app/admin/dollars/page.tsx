@@ -103,6 +103,10 @@ export default function DollarsPage() {
       : type === 'test' ? s.test : type === 'attitude' ? s.attitude : false;
   };
 
+  const isStudentAwarded = (studentId: string) => {
+    return (state.awardRecords || []).some(a => a.studentId === studentId && a.week === week);
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -129,7 +133,13 @@ export default function DollarsPage() {
 
   const awardSelected = () => {
     const results: AwardEntry[] = [];
+    const skipped: string[] = [];
     selectedIds.forEach(id => {
+      if (isStudentAwarded(id)) {
+        const student = state.students.find(s => s.id === id);
+        skipped.push(student?.name || '');
+        return;
+      }
       const amount = calcDollars(id);
       if (amount > 0) {
         const student = state.students.find(s => s.id === id);
@@ -137,7 +147,8 @@ export default function DollarsPage() {
         results.push({ name: student?.name || '', amount });
       }
     });
-    if (results.length === 0) return alert('선택한 학생 중 지급할 달러가 없습니다');
+    if (results.length === 0) return alert(`선택한 학생 중 지급할 달러가 없습니다${skipped.length > 0 ? `\n(이미 지급됨: ${skipped.join(', ')})` : ''}`);
+    if (skipped.length > 0) alert(`${skipped.join(', ')}은(는) 이미 지급되어 건너뜁니다`);
     setSelectedIds(new Set());
     setAwardSummary(results);
   };
@@ -485,9 +496,9 @@ export default function DollarsPage() {
                       <span style={{ fontSize: 20, fontWeight: 900, color: amount > 0 ? '#7c3aed' : '#94a3b8' }}>+${amount}</span>
                     </div>
 
-                    <button onClick={e => { e.stopPropagation(); awardWeekly(student.id); }} disabled={amount === 0}
-                      style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: amount > 0 ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : '#e2e8f0', color: amount > 0 ? 'white' : '#94a3b8', cursor: amount > 0 ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 14 }}>
-                      주간 달러 지급 (+${amount})
+                    <button onClick={e => { e.stopPropagation(); awardWeekly(student.id); }} disabled={amount === 0 || isStudentAwarded(student.id)}
+                      style={{ width: '100%', padding: '10px', borderRadius: 8, border: 'none', background: isStudentAwarded(student.id) ? '#d1d5db' : (amount > 0 ? 'linear-gradient(135deg, #7c3aed, #6d28d9)' : '#e2e8f0'), color: (amount > 0 && !isStudentAwarded(student.id)) ? 'white' : '#94a3b8', cursor: (amount > 0 && !isStudentAwarded(student.id)) ? 'pointer' : 'not-allowed', fontWeight: 700, fontSize: 14 }}>
+                      {isStudentAwarded(student.id) ? '✅ 이미 지급됨' : `주간 달러 지급 (+$${amount})`}
                     </button>
 
                     <div style={{ marginTop: 10 }}>

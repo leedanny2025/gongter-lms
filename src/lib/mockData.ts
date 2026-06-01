@@ -141,4 +141,5 @@ export const initialData: AppData = {
   currentWeek: getWeekKey(),
   shopItems: [],
   purchases: [],
+  awardRecords: [],
 };

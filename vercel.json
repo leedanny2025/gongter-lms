@@ -7,6 +7,10 @@
     {
       "path": "/api/cron/daily-absence-check",
       "schedule": "0 19 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-award",
+      "schedule": "0 19 * * 5"
     }
   ]
 }

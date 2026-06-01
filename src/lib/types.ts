@@ -149,6 +149,15 @@ export interface PurchaseRecord {
   purchasedAt: string;
 }
 
+export interface AwardRecord {
+  id: string;
+  studentId: string;
+  studentName: string;
+  amount: number;
+  week: string;
+  awardedAt: string;
+}
+
 export interface AppData {
   students: Student[];
   dollarConditions: DollarCondition[];
@@ -163,6 +172,7 @@ export interface AppData {
   currentWeek: string;
   shopItems: ShopItem[];
   purchases: PurchaseRecord[];
+  awardRecords: AwardRecord[];
 }
 
 export interface StudentReport {

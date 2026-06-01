@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useState, useRef, useCallback } from 'react';
 import { fbSet, fbDelete, fbGet } from './firebase';
-import { AppData, Student, DollarCondition, DayHomework, TestRecord, AttendanceRecord, AttitudeRecord, MakeupRequest, AttitudeDollarSettings, StudentReport, ShopItem, PurchaseRecord } from './types';
+import { AppData, Student, DollarCondition, DayHomework, TestRecord, AttendanceRecord, AttitudeRecord, MakeupRequest, AttitudeDollarSettings, StudentReport, ShopItem, PurchaseRecord, AwardRecord } from './types';
 import { initialData } from './mockData';
 import { sheetsSync } from './sheets';
 import { getWeekKey } from './utils';
@@ -102,7 +102,21 @@ function reducer(state: AppData, action: Action): AppData {
     case 'ADD_MAKEUP':    return { ...state, makeupRequests: [...(state.makeupRequests||[]), action.payload] };
     case 'UPDATE_MAKEUP': return { ...state, makeupRequests: (state.makeupRequests||[]).map(m => m.id === action.payload.id ? action.payload : m) };
     case 'DELETE_MAKEUP': return { ...state, makeupRequests: (state.makeupRequests||[]).filter(m => m.id !== action.payload) };
-    case 'AWARD_DOLLARS': return { ...state, students: state.students.map(s => s.id === action.payload.studentId ? { ...s, dollars: Math.max(0, s.dollars + action.payload.amount) } : s) };
+    case 'AWARD_DOLLARS': {
+      const student = state.students.find(s => s.id === action.payload.studentId);
+      return {
+        ...state,
+        students: state.students.map(s => s.id === action.payload.studentId ? { ...s, dollars: Math.max(0, s.dollars + action.payload.amount) } : s),
+        awardRecords: [...(state.awardRecords || []), {
+          id: Date.now().toString(),
+          studentId: action.payload.studentId,
+          studentName: student?.name || '',
+          amount: action.payload.amount,
+          week: state.currentWeek,
+          awardedAt: new Date().toISOString(),
+        }],
+      };
+    }
     case 'ADD_SHOP_ITEM':    return { ...state, shopItems: [...(state.shopItems || []), action.payload] };
     case 'UPDATE_SHOP_ITEM': return { ...state, shopItems: (state.shopItems || []).map(i => i.id === action.payload.id ? action.payload : i) };
     case 'DELETE_SHOP_ITEM': return { ...state, shopItems: (state.shopItems || []).filter(i => i.id !== action.payload) };
