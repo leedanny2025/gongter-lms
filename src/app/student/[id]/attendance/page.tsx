@@ -5,6 +5,8 @@ import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { QrCode, CheckCircle, Clock, AlertCircle, ExternalLink, Check, X } from 'lucide-react';
+import WeekSelector from '@/components/WeekSelector';
+import { getWeekKey, getWeekDateRange } from '@/lib/utils';
 
 const ATTENDANCE_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1gvAaaBfba-o2zPv9TM39xTKzmpaldsv2D-bIz7WAdms/edit?usp=sharing';
 
@@ -17,6 +19,7 @@ export default function StudentAttendancePage() {
   const [checkInTime, setCheckInTime] = useState('');
   const [checkOutTime, setCheckOutTime] = useState('');
   const [status, setStatus] = useState<'present' | 'late' | 'absent'>('present');
+  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
 
   const _now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
@@ -24,14 +27,15 @@ export default function StudentAttendancePage() {
   const todayRecord = state.attendanceRecords.find(a => a.studentId === id && a.date === todayStr);
   const myAttendance = state.attendanceRecords.filter(a => a.studentId === id);
 
-  // 이번 주 출석 통계
-  const thisWeekDates = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date();
-    d.setDate(d.getDate() - d.getDay() + i);
+  // 선택된 주 출석 통계
+  const { start: weekStart } = getWeekDateRange(selectedWeek);
+  const weekDates = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(weekStart);
+    d.setDate(d.getDate() + i);
     return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
   });
 
-  const weeklyAttendance = thisWeekDates.map(date => ({
+  const weeklyAttendance = weekDates.map(date => ({
     date,
     record: myAttendance.find(a => a.date === date),
     isToday: date === todayStr,
@@ -45,6 +49,9 @@ export default function StudentAttendancePage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* 주 선택 */}
+      <WeekSelector value={selectedWeek} onChange={setSelectedWeek} />
+
       {/* 메인 출석 카드 */}
       <div style={{ background: 'white', borderRadius: 20, padding: 24, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>

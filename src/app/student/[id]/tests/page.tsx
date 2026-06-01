@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store';
 import { TestRecord } from '@/lib/types';
 import { Camera, Upload, CheckCircle, Clock, ImageIcon, X, Loader2, ClipboardCheck, AlertCircle } from 'lucide-react';
 import { localDateStr, getWeekKey, DAY_LABELS, DAY_ORDER } from '@/lib/utils';
+import WeekSelector from '@/components/WeekSelector';
 
 type SubmitStep = 'form' | 'photo' | 'extracting' | 'confirm' | 'done';
 
@@ -15,7 +16,8 @@ export default function StudentTestPage() {
   const { state, dispatch } = useStore();
 
   const student = state.students.find(s => s.id === id);
-  const week = getWeekKey();
+  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
+  const week = selectedWeek;
   const myTests = state.testRecords.filter(t => t.studentId === id);
   const latestTest = myTests[myTests.length - 1];
 
@@ -79,6 +81,9 @@ export default function StudentTestPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* 주 선택 */}
+      <WeekSelector value={selectedWeek} onChange={setSelectedWeek} />
+
       {/* 이번 주 상태 */}
       {latestTest && step === 'form' && (
         <div style={{

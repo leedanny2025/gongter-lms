@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store';
 import { getWeekKey, getWeekDateRange, localDateStr, DAY_LABELS, DAY_ORDER } from '@/lib/utils';
 import { MakeupRequest, HomeworkDay } from '@/lib/types';
 import { Plus, X, CheckCircle, Clock, XCircle } from 'lucide-react';
+import WeekSelector from '@/components/WeekSelector';
 
 export default function MakeupPage() {
   const params = useParams();
@@ -13,7 +14,8 @@ export default function MakeupPage() {
   const { state, dispatch } = useStore();
 
   const student = state.students.find(s => s.id === id);
-  const week = getWeekKey();
+  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
+  const week = selectedWeek;
   const { start, label } = getWeekDateRange(week);
 
   const [showForm, setShowForm] = useState(false);
@@ -80,6 +82,9 @@ export default function MakeupPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+      {/* 주 선택 */}
+      <WeekSelector value={selectedWeek} onChange={setSelectedWeek} />
+
       {/* 이번 주 출석 현황 */}
       <div style={{ background: 'white', borderRadius: 20, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
         <h2 style={{ margin: '0 0 4px', fontSize: 17, fontWeight: 700 }}>이번 주 출석 현황</h2>

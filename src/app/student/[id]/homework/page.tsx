@@ -6,6 +6,7 @@ import { useStore } from '@/lib/store';
 import { DayHomework, HomeworkDay, HomeworkStatus } from '@/lib/types';
 import { getWeekKey } from '@/lib/utils';
 import { Plus, CheckCircle, X, Pencil, Check } from 'lucide-react';
+import WeekSelector from '@/components/WeekSelector';
 
 const KO_DAY = ['일', '월', '화', '수', '목', '금', '토'];
 
@@ -274,7 +275,8 @@ export default function StudentHomeworkPage() {
   const id = params.id as string;
   const { state, dispatch } = useStore();
   const student = state.students.find(s => s.id === id);
-  const week = getWeekKey();
+  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
+  const week = selectedWeek;
 
   const todayDay = (): HomeworkDay => {
     const d = new Date().getDay();
@@ -380,6 +382,9 @@ export default function StudentHomeworkPage() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+
+      {/* 주 선택 */}
+      <WeekSelector value={selectedWeek} onChange={setSelectedWeek} />
 
       {/* ── 요일 탭 ── */}
       <div style={{ background: 'white', borderRadius: 20, padding: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
