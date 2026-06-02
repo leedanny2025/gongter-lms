@@ -72,9 +72,12 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
       paddingBottom: 'env(safe-area-inset-bottom)',
     }}>
       <div style={{
-        display: 'flex', overflowX: 'auto',
+        display: 'flex',
+        overflowX: 'auto',
+        overflowY: 'hidden',
         WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
         scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
+        touchAction: 'pan-x',
       }}>
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
@@ -142,6 +145,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         flex: 1, minWidth: 0,
         padding: isMobile ? '16px 12px 90px' : '24px 28px',
         overflowY: 'auto', overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
         background: '#f8fafc',
       }}>
         <UndoBar />

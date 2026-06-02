@@ -23,7 +23,7 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
   ];
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f0f9ff', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}>
+    <div style={{ minHeight: '100vh', background: '#f0f9ff', paddingBottom: 'calc(80px + env(safe-area-inset-bottom))', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'] }}>
       {/* 상단 헤더 */}
       <div style={{ background: 'linear-gradient(135deg, #6366f1, #0ea5e9)', padding: '20px 20px 60px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
@@ -50,7 +50,7 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* 하단 네비게이션 */}
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', zIndex: 50, boxShadow: '0 -4px 12px rgba(0,0,0,0.08)', paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto' }}>
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', zIndex: 50, boxShadow: '0 -4px 12px rgba(0,0,0,0.08)', paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x' }}>
         {tabs.map(({ href, label, icon: Icon, badge }) => {
           const active = pathname === href;
           return (
