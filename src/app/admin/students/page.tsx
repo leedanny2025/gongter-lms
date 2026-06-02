@@ -514,8 +514,8 @@ export default function StudentsPage() {
       </div>
 
       <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <div style={{ overflowX: 'auto' }}>
-          <table>
+        <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x' }}>
+          <table style={{ touchAction: 'auto' }}>
             <thead>
               <tr>
                 <th>학생</th>
