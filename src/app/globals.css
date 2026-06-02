@@ -86,11 +86,50 @@ input:focus, select:focus, textarea:focus {
 input[type="date"], input[type="time"] { cursor: pointer; }
 
 /* ── Table ── */
-table { width: 100%; border-collapse: collapse; }
-th { text-align: left; padding: 10px 16px; font-size: 12px; font-weight: 700; color: var(--muted-fg); border-bottom: 1px solid var(--border); background: var(--muted); white-space: nowrap; }
-td { padding: 12px 16px; font-size: 14px; border-bottom: 1px solid var(--border); }
+table {
+  width: 100%;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+table > * > tr > th,
+table > * > tr > td {
+  overflow-wrap: break-word;
+  word-break: break-word;
+}
+th {
+  text-align: left;
+  padding: 10px 16px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted-fg);
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+  white-space: nowrap;
+}
+td {
+  padding: 12px 16px;
+  font-size: 14px;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
 tr:last-child td { border-bottom: none; }
 tr:hover td { background: #f8fafc; }
+
+/* ── Mobile table horizontal scroll ── */
+@media (max-width: 768px) {
+  table {
+    table-layout: auto;
+    min-width: 100%;
+    display: table;
+  }
+  th, td {
+    white-space: nowrap;
+    padding: 8px 10px;
+    font-size: 12px;
+  }
+}
 
 /* ── Modal ── */
 .modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: flex-end; justify-content: center; z-index: 100; padding: 0; }

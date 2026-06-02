@@ -290,8 +290,8 @@ function WeeklyView() {
         셀을 클릭하면 출석→지각→결석 순서로 변경됩니다
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x' }}>
-        <table style={{ minWidth: 480, touchAction: 'auto' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+        <table style={{ minWidth: 480, touchAction: 'auto', display: 'table', width: '100%' }}>
           <thead>
             <tr>
               <th style={{ minWidth: 90, textAlign: 'left' }}>학생</th>
@@ -686,8 +686,8 @@ export default function AttendancePage() {
             </div>
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x' }}>
-                <table style={{ touchAction: 'auto' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+                <table style={{ touchAction: 'auto', display: 'table', width: '100%', minWidth: 'fit-content' }}>
                   <thead>
                     <tr>
                       <th style={{ minWidth: 110 }}>학생</th>

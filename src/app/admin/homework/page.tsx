@@ -595,8 +595,8 @@ export default function HomeworkPage() {
           📊 주간 숙제 누적 현황
           <span style={{ fontSize: 12, fontWeight: 400, color: '#94a3b8', marginLeft: 8 }}>셀 클릭 → 상세 보기 &amp; 승인/완료 처리</span>
         </div>
-        <div style={{ overflowX: 'auto', borderRadius: 14, border: '1px solid #e2e8f0', background: 'white', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, touchAction: 'auto' }}>
+        <div style={{ overflowX: 'auto', borderRadius: 14, border: '1px solid #e2e8f0', background: 'white', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+          <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: 13, touchAction: 'auto', display: 'table' }}>
             <thead>
               <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
                 <th style={{ padding: '12px 16px', textAlign: 'left', fontWeight: 700, color: '#475569', whiteSpace: 'nowrap', minWidth: 80 }}>학생</th>

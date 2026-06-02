@@ -349,8 +349,8 @@ export default function DollarsPage() {
           </div>
 
           {viewMode === 'table' && (
-            <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 14, touchAction: 'auto' }}>
+            <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', minHeight: 'auto' }}>
+              <table style={{ minWidth: '100%', borderCollapse: 'collapse', fontSize: 14, touchAction: 'auto', display: 'table' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
                     <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#374151', fontSize: 13 }}>학생명</th>
