@@ -124,11 +124,16 @@ tr:hover td { background: #f8fafc; }
 }
 
 /* ── Modal ── */
-.modal-backdrop { position: fixed; inset: 0; background: rgba(0,0,0,0.5); display: flex; align-items: center; justify-content: center; z-index: 100; padding: 20px; overflow-y: auto; }
+.modal-backdrop {
+  position: fixed; inset: 0; background: rgba(0,0,0,0.5);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 100; padding: 20px; overflow-y: auto;
+}
 .modal {
   background: white; border-radius: 20px; padding: 24px 20px;
   width: 100%; max-width: 480px; max-height: 90vh; overflow-y: auto;
   -webkit-overflow-scrolling: touch;
+  box-shadow: 0 10px 40px rgba(0,0,0,0.15);
 }
 @media (max-width: 640px) {
   .modal-backdrop { align-items: flex-start; padding-top: 60px; }
