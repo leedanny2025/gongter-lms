@@ -466,13 +466,14 @@ export default function AdminDashboard() {
             </h3>
             <a href="/admin/homework" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>전체 →</a>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6 }}>
-            <div />
-            {DAY_KO.map(d => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{d}</div>
-            ))}
-          </div>
-          {state.students.map(s => (
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6, minWidth: '100%' }}>
+              <div />
+              {DAY_KO.map(d => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{d}</div>
+              ))}
+            </div>
+            {state.students.map(s => (
             <div key={s.id} style={GRID_ROW}>
               <div style={NAME_CELL}>{s.name}</div>
               {DAYS_HW.map(day => {
@@ -501,8 +502,9 @@ export default function AdminDashboard() {
                 );
               })}
             </div>
-          ))}
-          {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
+            ))}
+            {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
+          </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
             {[['⏳','확인대기'],['📋','합의됨'],['🔄','완료확인'],['✅','완료'],['❌','반려'],['✗','미이행'],['—','숙제없음']].map(([e, l]) => (
               <span key={l} style={{ fontSize: 11, color: '#64748b' }}>{e} {l}</span>
@@ -518,17 +520,18 @@ export default function AdminDashboard() {
             </h3>
             <a href="/admin/attendance" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>전체 →</a>
           </div>
-          {/* 요일 헤더 (날짜 포함) */}
-          <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6 }}>
-            <div />
-            {DAY_KO.map((d, i) => (
-              <div key={d} style={{ textAlign: 'center' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{d}</div>
-                <div style={{ fontSize: 9, color: '#cbd5e1' }}>{weekDates[i]?.slice(5)}</div>
-              </div>
-            ))}
-          </div>
-          {state.students.map(s => (
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+            {/* 요일 헤더 (날짜 포함) */}
+            <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6, minWidth: '100%' }}>
+              <div />
+              {DAY_KO.map((d, i) => (
+                <div key={d} style={{ textAlign: 'center' }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{d}</div>
+                  <div style={{ fontSize: 9, color: '#cbd5e1' }}>{weekDates[i]?.slice(5)}</div>
+                </div>
+              ))}
+            </div>
+            {state.students.map(s => (
             <div key={s.id} style={GRID_ROW}>
               <div style={NAME_CELL}>{s.name}</div>
               {weekDates.map((date, i) => {
@@ -599,7 +602,8 @@ export default function AdminDashboard() {
               })}
             </div>
           ))}
-          {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
+            {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
+          </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
             {[['✅','출석'],['⏰','지각(N분)'],['❌','결석'],['전결','전날 결석']].map(([e, l]) => (
               <span key={l} style={{ fontSize: 11, color: '#64748b' }}>{e} {l}</span>
@@ -615,13 +619,14 @@ export default function AdminDashboard() {
             </h3>
             <a href="/admin/tests" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>전체 →</a>
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6 }}>
-            <div />
-            {DAY_KO.map(d => (
-              <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{d}</div>
-            ))}
-          </div>
-          {state.students.map(s => (
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6, minWidth: '100%' }}>
+              <div />
+              {DAY_KO.map(d => (
+                <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>{d}</div>
+              ))}
+            </div>
+            {state.students.map(s => (
             <div key={s.id} style={GRID_ROW}>
               <div style={NAME_CELL}>{s.name}</div>
               {DAYS_HW.map(day => {
@@ -645,7 +650,8 @@ export default function AdminDashboard() {
               })}
             </div>
           ))}
-          {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
+            {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
+          </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
             {[['⏳','확인대기'],['✅','확정']].map(([e, l]) => (
               <span key={l} style={{ fontSize: 11, color: '#64748b' }}>{e} {l}</span>
@@ -669,58 +675,60 @@ export default function AdminDashboard() {
             const headerStyle: React.CSSProperties = { fontSize: 10, fontWeight: 700, textAlign: 'center', color: '#94a3b8' };
             return (
               <>
-                {/* 헤더 */}
-                <div style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 6, alignItems: 'end' }}>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>학생</div>
-                  <div style={{ ...headerStyle, color: '#7c3aed' }}>보유</div>
-                  {basicConditions.map(c => <div key={c.id} style={{ ...headerStyle, color: '#0369a1' }}>{c.name}</div>)}
-                  {bonusConditions.length > 0 && <div style={{ background: '#e2e8f0', borderRadius: 2 }} />}
-                  {bonusConditions.map(c => <div key={c.id} style={{ ...headerStyle, color: '#7c3aed' }}>⭐{c.name}</div>)}
-                  <div style={{ ...headerStyle, color: '#7c3aed' }}>이번주</div>
-                </div>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+                  {/* 헤더 */}
+                  <div style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 6, alignItems: 'end', minWidth: '100%' }}>
+                    <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>학생</div>
+                    <div style={{ ...headerStyle, color: '#7c3aed' }}>보유</div>
+                    {basicConditions.map(c => <div key={c.id} style={{ ...headerStyle, color: '#0369a1' }}>{c.name}</div>)}
+                    {bonusConditions.length > 0 && <div style={{ background: '#e2e8f0', borderRadius: 2 }} />}
+                    {bonusConditions.map(c => <div key={c.id} style={{ ...headerStyle, color: '#7c3aed' }}>⭐{c.name}</div>)}
+                    <div style={{ ...headerStyle, color: '#7c3aed' }}>이번주</div>
+                  </div>
 
-                {/* 학생 행 */}
-                {state.students.map(s => {
-                  const weekly = calcWeeklyDollars(s.id);
-                  return (
-                    <div key={s.id} style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 5, alignItems: 'center' }}>
-                      <div style={NAME_CELL}>{s.name}</div>
-                      <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 13, color: '#7c3aed',
-                        background: '#f3e8ff', borderRadius: 6, padding: '4px 2px' }}>
-                        ${s.dollars}
+                  {/* 학생 행 */}
+                  {state.students.map(s => {
+                    const weekly = calcWeeklyDollars(s.id);
+                    return (
+                      <div key={s.id} style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 5, alignItems: 'center' }}>
+                        <div style={NAME_CELL}>{s.name}</div>
+                        <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 13, color: '#7c3aed',
+                          background: '#f3e8ff', borderRadius: 6, padding: '4px 2px' }}>
+                          ${s.dollars}
+                        </div>
+                        {basicConditions.map(c => {
+                          const { rate, count, total } = getAchievementRate(s.id, c.type);
+                          const earnedAmount = Math.round(c.amount * rate);
+                          const ratePct = Math.round(rate * 100);
+                          return (
+                            <div key={c.id} style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
+                              background: rate > 0 ? '#d1fae5' : '#f1f5f9', fontSize: 11, fontWeight: 700,
+                              color: rate > 0 ? '#15803d' : '#cbd5e1' }}>
+                              <div style={{ fontSize: 10 }}>{count}/{total}</div>
+                              <div>+${earnedAmount}</div>
+                            </div>
+                          );
+                        })}
+                        {bonusConditions.length > 0 && <div />}
+                        {bonusConditions.map(c => {
+                          const met = conditionMet(s.id, c.type);
+                          return (
+                            <div key={c.id} style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
+                              background: met ? '#f3e8ff' : '#f1f5f9', fontSize: 11, fontWeight: 700,
+                              color: met ? '#7c3aed' : '#cbd5e1' }}>
+                              {met ? `+$${c.amount}` : '—'}
+                            </div>
+                          );
+                        })}
+                        <div style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
+                          background: weekly > 0 ? '#ede9fe' : '#f1f5f9',
+                          fontWeight: 800, fontSize: 13, color: weekly > 0 ? '#7c3aed' : '#94a3b8' }}>
+                          +${weekly}
+                        </div>
                       </div>
-                      {basicConditions.map(c => {
-                        const { rate, count, total } = getAchievementRate(s.id, c.type);
-                        const earnedAmount = Math.round(c.amount * rate);
-                        const ratePct = Math.round(rate * 100);
-                        return (
-                          <div key={c.id} style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
-                            background: rate > 0 ? '#d1fae5' : '#f1f5f9', fontSize: 11, fontWeight: 700,
-                            color: rate > 0 ? '#15803d' : '#cbd5e1' }}>
-                            <div style={{ fontSize: 10 }}>{count}/{total}</div>
-                            <div>+${earnedAmount}</div>
-                          </div>
-                        );
-                      })}
-                      {bonusConditions.length > 0 && <div />}
-                      {bonusConditions.map(c => {
-                        const met = conditionMet(s.id, c.type);
-                        return (
-                          <div key={c.id} style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
-                            background: met ? '#f3e8ff' : '#f1f5f9', fontSize: 11, fontWeight: 700,
-                            color: met ? '#7c3aed' : '#cbd5e1' }}>
-                            {met ? `+$${c.amount}` : '—'}
-                          </div>
-                        );
-                      })}
-                      <div style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
-                        background: weekly > 0 ? '#ede9fe' : '#f1f5f9',
-                        fontWeight: 800, fontSize: 13, color: weekly > 0 ? '#7c3aed' : '#94a3b8' }}>
-                        +${weekly}
-                      </div>
-                    </div>
-                  );
-                })}
+                    );
+                  })}
+                </div>
 
                 {/* 범례 */}
                 <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
