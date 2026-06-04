@@ -55,9 +55,9 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
           const active = pathname === href;
           return (
             <Link key={href} href={href} style={{
-              flex: '0 0 auto', minWidth: 120,
+              flex: '0 0 auto', minWidth: 80,
               display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center',
-              padding: '20px 16px', textDecoration: 'none', gap: 8, position: 'relative',
+              padding: '13px 11px', textDecoration: 'none', gap: 5, position: 'relative',
               color: active ? '#6366f1' : '#94a3b8',
               borderTop: active ? '2px solid #6366f1' : '2px solid transparent',
               background: active ? '#f5f3ff' : 'white',
@@ -65,10 +65,10 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
               WebkitTapHighlightColor: 'transparent',
               userSelect: 'none',
             }}>
-              <Icon size={40} />
-              <span style={{ fontSize: 20, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{label}</span>
+              <Icon size={27} />
+              <span style={{ fontSize: 13, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{label}</span>
               {badge ? (
-                <span style={{ position: 'absolute', top: 12, right: 16, width: 32, height: 32, background: '#f97316', borderRadius: '50%', fontSize: 18, color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <span style={{ position: 'absolute', top: 8, right: 10, width: 21, height: 21, background: '#f97316', borderRadius: '50%', fontSize: 12, color: 'white', fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                   {badge}
                 </span>
               ) : null}
