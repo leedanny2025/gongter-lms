@@ -46,6 +46,8 @@ export async function GET(req: NextRequest) {
 
     // 각 학생에게 달러 지급 및 지급 기록 생성
     const awardedStudents: string[] = [];
+    const newAwardRecords = [...awardRecords];
+
     await Promise.all(
       Object.entries(students).map(async ([studentId, student]) => {
         const s = student as Record<string, unknown>;
@@ -57,22 +59,39 @@ export async function GET(req: NextRequest) {
 
         if (alreadyAwarded) return;
 
-        // 달러 금액 계산 (간단한 예: 모든 조건 충족 시 합산 금액)
-        // 실제로는 더 복잡한 계산이 필요할 수 있음
-        const totalAmount = enabledConditions.reduce((sum, c) => sum + (Number(c.amount) || 0), 0);
+        // 지급 예정액 사용 (weeklyPendingDollars)
+        const pendingDollars = Number(s.weeklyPendingDollars) || 0;
+        if (pendingDollars <= 0) return;
 
-        if (totalAmount <= 0) return;
-
-        // 학생 달러 업데이트
+        // 학생 달러 업데이트 및 주별 지급액 기록, 지급 예정액 리셋
         const currentDollars = Number(s.dollars) || 0;
+        const updatedWeeklyAwarded = { ...(s.weeklyDollarsAwarded as Record<string, number> || {}), [currentWeek]: pendingDollars };
+
         await fbWrite(`lms/students/${studentId}`, {
           ...s,
-          dollars: currentDollars + totalAmount,
+          dollars: currentDollars + pendingDollars,
+          weeklyDollarsAwarded: updatedWeeklyAwarded,
+          weeklyPendingDollars: 0, // 지급 후 리셋
+        });
+
+        // 지급 기록 추가
+        newAwardRecords.push({
+          id: Date.now().toString() + Math.random(),
+          studentId,
+          studentName: s.name || '',
+          amount: pendingDollars,
+          week: currentWeek,
+          awardedAt: new Date().toISOString(),
         });
 
         awardedStudents.push(studentId);
       })
     );
+
+    // 지급 기록 저장
+    if (newAwardRecords.length > awardRecords.length) {
+      await fbWrite('lms/awardRecords', newAwardRecords);
+    }
 
     return NextResponse.json({
       ok: true,

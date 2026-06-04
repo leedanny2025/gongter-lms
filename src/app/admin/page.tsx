@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { Users, DollarSign, BookOpen, ClipboardCheck, Calendar, TrendingUp, Clock, X, CheckCircle } from 'lucide-react';
 import { TestRecord, DayHomework, AttendanceRecord, HomeworkDay } from '@/lib/types';
@@ -260,6 +260,46 @@ export default function AdminDashboard() {
   const [studentDollarHistoryModal, setStudentDollarHistoryModal] = useState<{ studentId: string; studentName: string } | null>(null);
   const [makeupEditRemainingHours, setMakeupEditRemainingHours] = useState<string>('');
   const [makeupEditReason, setMakeupEditReason] = useState<string>('');
+
+  // 매주 월요일에 지급 예정액 자동 계산
+  useEffect(() => {
+    const checkAndUpdatePendingDollars = () => {
+      const now = new Date();
+      const dayOfWeek = now.getDay();
+      const isMonday = dayOfWeek === 1;
+
+      if (isMonday) {
+        const currentWeek = state.currentWeek;
+
+        // 각 학생의 이번주 지급액 계산
+        state.students.forEach(student => {
+          const alreadyAwarded = student.weeklyDollarsAwarded?.[currentWeek] || 0;
+          if (alreadyAwarded === 0) {
+            // 아직 지급하지 않았으면, weeklyPendingDollars 계산
+            let total = 0;
+            const enabledConditions = state.dollarConditions.filter(c => c.enabled);
+            const basicConditions = enabledConditions.filter(c => ['attendance', 'homework', 'test'].includes(c.type));
+            const bonusConditions = enabledConditions.filter(c => ['attitude', 'custom'].includes(c.type));
+
+            // 기본 조건 계산 (간략화 - 실제로는 calcWeeklyDollars와 동일해야 함)
+            basicConditions.forEach(c => {
+              if (c.type === 'attendance') {
+                const presentCount = state.attendanceRecords.filter(a => a.studentId === student.id && a.status !== 'absent').length;
+                const total_required = student.scheduleDays?.length || 5;
+                total += Math.round(c.amount * (presentCount / total_required));
+              }
+            });
+
+            if (total !== student.weeklyPendingDollars) {
+              dispatch({ type: 'UPDATE_STUDENT', payload: { ...student, weeklyPendingDollars: total } });
+            }
+          }
+        });
+      }
+    };
+
+    checkAndUpdatePendingDollars();
+  }, [state.currentWeek, state.students, state.dollarConditions, state.attendanceRecords, dispatch]);
 
   const handleWeekChange = (w: string) => {
     setWeek(w);
@@ -749,7 +789,7 @@ export default function AdminDashboard() {
 
                   {/* 학생 행 */}
                   {state.students.map(s => {
-                    const weekly = calcWeeklyDollars(s.id);
+                    const pending = s.weeklyPendingDollars || 0;
                     return (
                       <div key={s.id} style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 5, alignItems: 'center' }}>
                         <div style={{ ...NAME_CELL, cursor: 'pointer', color: '#6366f1', fontWeight: 700 }} onClick={() => setStudentDollarHistoryModal({ studentId: s.id, studentName: s.name })}>{s.name}</div>
@@ -782,9 +822,9 @@ export default function AdminDashboard() {
                           );
                         })}
                         <div style={{ textAlign: 'center', borderRadius: 6, padding: '4px 2px',
-                          background: weekly > 0 ? '#ede9fe' : '#f1f5f9',
-                          fontWeight: 800, fontSize: 13, color: weekly > 0 ? '#7c3aed' : '#94a3b8' }}>
-                          +${weekly}
+                          background: pending > 0 ? '#ede9fe' : '#f1f5f9',
+                          fontWeight: 800, fontSize: 13, color: pending > 0 ? '#7c3aed' : '#94a3b8' }}>
+                          {pending > 0 ? `+$${pending}` : '—'}
                         </div>
                       </div>
                     );

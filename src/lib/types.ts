@@ -14,6 +14,7 @@ export interface Student {
   scheduleTime?: string;
   makeupHoursRequired?: number;
   weeklyDollarsAwarded?: Record<string, number>;
+  weeklyPendingDollars?: number;
 }
 
 export interface DollarCondition {
