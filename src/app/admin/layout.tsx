@@ -83,14 +83,14 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
           const active = pathname === href;
           return (
             <Link key={href} href={href} style={{
-              flex: '0 0 auto', minWidth: 60,
+              flex: '0 0 auto', minWidth: 120,
               display: 'flex', flexDirection: 'column', alignItems: 'center',
-              padding: '10px 6px', textDecoration: 'none', gap: 3,
+              padding: '20px 12px', textDecoration: 'none', gap: 6,
               color: active ? '#a5b4fc' : '#64748b',
               borderTop: active ? '2px solid #6366f1' : '2px solid transparent',
             }}>
-              <Icon size={18} />
-              <span style={{ fontSize: 9, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{label}</span>
+              <Icon size={36} />
+              <span style={{ fontSize: 18, fontWeight: active ? 700 : 400, whiteSpace: 'nowrap' }}>{label}</span>
             </Link>
           );
         })}

@@ -606,9 +606,9 @@ export default function AdminDashboard() {
             ))}
             {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 20, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
             {[['⏳','확인대기'],['📋','합의됨'],['🔄','완료확인'],['✅','완료'],['❌','반려'],['✗','미이행'],['—','숙제없음']].map(([e, l]) => (
-              <span key={l} style={{ fontSize: 11, color: '#64748b' }}>{e} {l}</span>
+              <span key={l} style={{ fontSize: 22, color: '#64748b' }}>{e} {l}</span>
             ))}
           </div>
         </div>
@@ -705,9 +705,9 @@ export default function AdminDashboard() {
           ))}
             {state.students.length === 0 && <div style={{ color: '#94a3b8', fontSize: 13, textAlign: 'center', padding: 16 }}>등록된 학생이 없습니다</div>}
           </div>
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
+          <div style={{ display: 'flex', gap: 20, flexWrap: 'wrap', marginTop: 20, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
             {[['✅','출석'],['⏰','지각(N분)'],['❌','결석'],['전결','전날 결석']].map(([e, l]) => (
-              <span key={l} style={{ fontSize: 11, color: '#64748b' }}>{e} {l}</span>
+              <span key={l} style={{ fontSize: 22, color: '#64748b' }}>{e} {l}</span>
             ))}
           </div>
         </div>
@@ -755,7 +755,7 @@ export default function AdminDashboard() {
           </div>
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
             {[['⏳','확인대기'],['✅','확정']].map(([e, l]) => (
-              <span key={l} style={{ fontSize: 11, color: '#64748b' }}>{e} {l}</span>
+              <span key={l} style={{ fontSize: 22, color: '#64748b' }}>{e} {l}</span>
             ))}
           </div>
         </div>
@@ -832,10 +832,10 @@ export default function AdminDashboard() {
                 </div>
 
                 {/* 범례 */}
-                <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap', marginTop: 10, paddingTop: 10, borderTop: '1px solid #f1f5f9' }}>
-                  <span style={{ fontSize: 11, color: '#0369a1', fontWeight: 600 }}>📋 기본: {basicConditions.map(c => c.name).join(' · ')}</span>
+                <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap', marginTop: 20, paddingTop: 20, borderTop: '1px solid #f1f5f9' }}>
+                  <span style={{ fontSize: 22, color: '#0369a1', fontWeight: 600 }}>📋 기본: {basicConditions.map(c => c.name).join(' · ')}</span>
                   {bonusConditions.length > 0 && (
-                    <span style={{ fontSize: 11, color: '#7c3aed', fontWeight: 600 }}>⭐ 보너스: {bonusConditions.map(c => c.name).join(' · ')}</span>
+                    <span style={{ fontSize: 22, color: '#7c3aed', fontWeight: 600 }}>⭐ 보너스: {bonusConditions.map(c => c.name).join(' · ')}</span>
                   )}
                 </div>
               </>
