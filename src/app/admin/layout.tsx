@@ -144,9 +144,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
       <main style={{
         flex: 1, minWidth: 0,
         padding: isMobile ? '16px 12px 90px' : '24px 28px',
-        overflowY: 'auto', overflowX: 'hidden',
+        overflowY: 'auto', overflowX: 'auto',
         WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
         background: '#f8fafc',
+        touchAction: 'pan-x pan-y',
       }}>
         <UndoBar />
         {children}
