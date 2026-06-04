@@ -13,6 +13,7 @@ export interface Student {
   scheduleTimes?: Record<string, string>;
   scheduleTime?: string;
   makeupHoursRequired?: number;
+  weeklyDollarsAwarded?: Record<string, number>;
 }
 
 export interface DollarCondition {

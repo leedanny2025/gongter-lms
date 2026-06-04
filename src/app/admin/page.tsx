@@ -257,6 +257,7 @@ export default function AdminDashboard() {
   const [makeupEditPopup, setMakeupEditPopup] = useState<{ req: typeof state.makeupRequests[0] } | null>(null);
   const [makeupEditStatus, setMakeupEditStatus] = useState<'completed' | 'partial' | 'postponed' | 'cancelled'>('completed');
   const [makeupEditCompletedHours, setMakeupEditCompletedHours] = useState<string>('');
+  const [studentDollarHistoryModal, setStudentDollarHistoryModal] = useState<{ studentId: string; studentName: string } | null>(null);
   const [makeupEditRemainingHours, setMakeupEditRemainingHours] = useState<string>('');
   const [makeupEditReason, setMakeupEditReason] = useState<string>('');
 
@@ -378,6 +379,10 @@ export default function AdminDashboard() {
   };
 
   const calcWeeklyDollars = (studentId: string) => {
+    const student = state.students.find(s => s.id === studentId);
+    const alreadyAwarded = student?.weeklyDollarsAwarded?.[week] || 0;
+    if (alreadyAwarded > 0) return 0; // 이미 지급했으면 0으로 표시
+
     let total = 0;
     basicConditions.forEach(c => {
       const { rate } = getAchievementRate(studentId, c.type);
@@ -394,8 +399,64 @@ export default function AdminDashboard() {
   const DAYS_HW = ['mon', 'tue', 'wed', 'thu', 'fri'] as const;
   const dateToDay = (date: string) => DAYS_HW[new Date(date + 'T12:00:00').getDay() - 1] ?? null;
 
+  // 학생 누적 달러 지급 기록 모달
+  const StudentDollarHistoryModal = () => {
+    if (!studentDollarHistoryModal) return null;
+    const records = (state.awardRecords || []).filter(r => r.studentId === studentDollarHistoryModal.studentId);
+    const totalAwarded = records.reduce((sum, r) => sum + r.amount, 0);
+
+    return (
+      <div className="modal-backdrop" onClick={() => setStudentDollarHistoryModal(null)}>
+        <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>달러 지급 기록</div>
+              <div style={{ fontSize: 12, color: '#94a3b8' }}>{studentDollarHistoryModal.studentName}</div>
+            </div>
+            <button onClick={() => setStudentDollarHistoryModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}><X size={20} /></button>
+          </div>
+
+          <div style={{ background: '#f8fafc', borderRadius: 12, padding: 16, marginBottom: 16 }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>누적 지급액</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#7c3aed', marginTop: 4 }}>${totalAwarded}</div>
+              </div>
+              <div style={{ textAlign: 'right' }}>
+                <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8' }}>지급 횟수</div>
+                <div style={{ fontSize: 24, fontWeight: 800, color: '#6366f1', marginTop: 4 }}>{records.length}</div>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ fontSize: 12, fontWeight: 700, color: '#64748b', marginBottom: 10 }}>지급 내역</div>
+          <div style={{ maxHeight: 300, overflowY: 'auto', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12 }}>
+            {records.length === 0 ? (
+              <div style={{ textAlign: 'center', color: '#94a3b8', padding: 20 }}>지급 기록이 없습니다</div>
+            ) : (
+              records.map(r => (
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+                  <div>
+                    <div style={{ fontSize: 12, fontWeight: 600, color: '#374151' }}>{r.week} 주</div>
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{new Date(r.awardedAt).toLocaleDateString('ko-KR')}</div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <div style={{ fontSize: 14, fontWeight: 800, color: '#7c3aed' }}>+${r.amount}</div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <button onClick={() => setStudentDollarHistoryModal(null)} className="btn btn-primary" style={{ width: '100%', marginTop: 16 }}>닫기</button>
+        </div>
+      </div>
+    );
+  };
+
   return (
     <div>
+      <StudentDollarHistoryModal />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 22, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>대시보드</h1>
@@ -691,7 +752,7 @@ export default function AdminDashboard() {
                     const weekly = calcWeeklyDollars(s.id);
                     return (
                       <div key={s.id} style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 5, alignItems: 'center' }}>
-                        <div style={NAME_CELL}>{s.name}</div>
+                        <div style={{ ...NAME_CELL, cursor: 'pointer', color: '#6366f1', fontWeight: 700 }} onClick={() => setStudentDollarHistoryModal({ studentId: s.id, studentName: s.name })}>{s.name}</div>
                         <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 13, color: '#7c3aed',
                           background: '#f3e8ff', borderRadius: 6, padding: '4px 2px' }}>
                           ${s.dollars}

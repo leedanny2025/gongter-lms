@@ -106,7 +106,11 @@ function reducer(state: AppData, action: Action): AppData {
       const student = state.students.find(s => s.id === action.payload.studentId);
       return {
         ...state,
-        students: state.students.map(s => s.id === action.payload.studentId ? { ...s, dollars: Math.max(0, s.dollars + action.payload.amount) } : s),
+        students: state.students.map(s => s.id === action.payload.studentId ? {
+          ...s,
+          dollars: Math.max(0, s.dollars + action.payload.amount),
+          weeklyDollarsAwarded: { ...(s.weeklyDollarsAwarded || {}), [state.currentWeek]: action.payload.amount }
+        } : s),
         awardRecords: [...(state.awardRecords || []), {
           id: Date.now().toString(),
           studentId: action.payload.studentId,
