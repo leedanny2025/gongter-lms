@@ -20,6 +20,9 @@
 
 html { -webkit-text-size-adjust: 100%; }
 
+/* Make buttons and links respond faster to touch */
+button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+
 body {
   background: var(--bg);
   color: var(--text);

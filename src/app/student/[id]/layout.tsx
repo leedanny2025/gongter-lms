@@ -61,7 +61,7 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
               color: active ? '#6366f1' : '#94a3b8',
               borderTop: active ? '2px solid #6366f1' : '2px solid transparent',
               background: active ? '#f5f3ff' : 'white',
-              touchAction: 'manipulation',
+              touchAction: 'pan-y',
               WebkitTapHighlightColor: 'transparent',
               userSelect: 'none',
             }}>

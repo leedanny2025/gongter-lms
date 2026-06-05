@@ -52,8 +52,8 @@ function HomeworkDashModal({ hw, studentId, studentName, day, week, onClose, onA
   const inputStyle = { fontSize: 13, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' as const };
 
   return (
-    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+    <div onPointerDown={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+      <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>숙제 상세</h3>
@@ -132,8 +132,8 @@ function AttDashModal({ rec, studentId, studentName, classGroup, date, onClose, 
     onClose();
   };
   return (
-    <div onMouseDown={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-      <div onMouseDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+    <div onPointerDown={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+      <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>{studentName}</h3>
@@ -205,7 +205,7 @@ function AttDashModal({ rec, studentId, studentName, classGroup, date, onClose, 
 
 function StatCard({ title, value, sub, icon: Icon, color, href, onClick }: { title: string; value: string | number; sub: string; icon: React.ElementType; color: string; href?: string; onClick?: () => void }) {
   const inner = (
-    <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 16, cursor: href || onClick ? 'pointer' : undefined, transition: (href || onClick) ? 'box-shadow 0.15s' : undefined }} onClick={onClick}>
+    <div className="card" style={{ display: 'flex', alignItems: 'flex-start', gap: 14, padding: 16, cursor: href || onClick ? 'pointer' : undefined, transition: (href || onClick) ? 'box-shadow 0.15s' : undefined }} onClick={onClick} onPointerUp={onClick}>
       <div style={{ background: color + '20', borderRadius: 10, padding: 10, flexShrink: 0 }}>
         <Icon size={20} color={color} />
       </div>
@@ -446,8 +446,8 @@ export default function AdminDashboard() {
     const totalAwarded = records.reduce((sum, r) => sum + r.amount, 0);
 
     return (
-      <div className="modal-backdrop" onClick={() => setStudentDollarHistoryModal(null)}>
-        <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
+      <div className="modal-backdrop" onPointerDown={() => setStudentDollarHistoryModal(null)}>
+        <div className="modal" style={{ maxWidth: 460 }} onPointerDown={e => e.stopPropagation()}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>달러 지급 기록</div>
@@ -597,7 +597,7 @@ export default function AdminDashboard() {
                 return (
                   <div key={day} title={st === 'no_hw' ? '숙제없음' : st || (isScheduled ? '미제출' : '보충')}
                     onClick={openHw}
-                    style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: st === 'no_hw' ? 12 : 14, color: st === 'no_hw' ? '#94a3b8' : undefined, cursor: 'pointer' }}>
+                    style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: st === 'no_hw' ? 12 : 14, color: st === 'no_hw' ? '#94a3b8' : undefined, cursor: 'pointer', touchAction: 'pan-y' }}>
                     {cell.e}
                   </div>
                 );
@@ -648,7 +648,7 @@ export default function AdminDashboard() {
 
                 if (!isScheduled && !rec) {
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f8fafc', fontSize: 11, cursor: 'pointer' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f8fafc', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
                       <div style={{ color: '#e2e8f0' }}>–</div>
                     </div>
                   );
@@ -656,7 +656,7 @@ export default function AdminDashboard() {
 
                 if (!rec) {
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, cursor: 'pointer' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
                       <div style={{ color: '#cbd5e1' }}>{isPast ? '·' : ''}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
                     </div>
@@ -665,7 +665,7 @@ export default function AdminDashboard() {
 
                 if (rec.status === 'present') {
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : '#d1fae5', fontSize: 13, cursor: 'pointer' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : '#d1fae5', fontSize: 13, cursor: 'pointer', touchAction: 'pan-y' }}>
                       <div>{!isScheduled ? '보' : '✅'}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
                     </div>
@@ -686,7 +686,7 @@ export default function AdminDashboard() {
                     }
                   }
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: '#fef3c7', fontSize: 11, cursor: 'pointer' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: '#fef3c7', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
                       <div>⏰</div>
                       <div style={{ fontSize: 9, fontWeight: 700, color: '#92400e' }}>{lateText}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
@@ -696,7 +696,7 @@ export default function AdminDashboard() {
 
                 // absent
                 return (
-                  <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#fee2e2', fontSize: 13, cursor: 'pointer' }}>
+                  <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#fee2e2', fontSize: 13, cursor: 'pointer', touchAction: 'pan-y' }}>
                     ❌
                   </div>
                 );
@@ -736,14 +736,14 @@ export default function AdminDashboard() {
                 if (!test) {
                   return (
                     <div key={day} onClick={() => { setAddTestPopup({ studentId: s.id, studentName: s.name, date: dateForDay }); setAddTestSubject('영어 어휘 테스트'); setAddTestScore(''); setAddTestMax('20'); }}
-                      style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, color: '#cbd5e1', cursor: 'pointer' }}>·</div>
+                      style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, color: '#cbd5e1', cursor: 'pointer', touchAction: 'pan-y' }}>·</div>
                   );
                 }
                 const confirmed = test.status === 'confirmed';
                 const scoreText = test.score !== null ? `${test.score}개` : '-';
                 return (
                   <div key={day} title={test.subject} onClick={() => { setTestPopup({ test, studentName: s.name }); setTestEditScore(test.score?.toString() ?? ''); setTestEditSubject(test.subject); setTestEditMax(test.maxScore.toString()); setTestEditDate(test.date); }}
-                    style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: confirmed ? '#d1fae5' : '#fef3c7', fontSize: 11, cursor: 'pointer' }}>
+                    style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: confirmed ? '#d1fae5' : '#fef3c7', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
                     <div>{confirmed ? '✅' : '⏳'}</div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: confirmed ? '#15803d' : '#92400e' }}>{scoreText}</div>
                   </div>
@@ -792,7 +792,7 @@ export default function AdminDashboard() {
                     const pending = s.weeklyPendingDollars || 0;
                     return (
                       <div key={s.id} style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 5, alignItems: 'center' }}>
-                        <div style={{ ...NAME_CELL, cursor: 'pointer', color: '#6366f1', fontWeight: 700 }} onClick={() => setStudentDollarHistoryModal({ studentId: s.id, studentName: s.name })}>{s.name}</div>
+                        <div style={{ ...NAME_CELL, cursor: 'pointer', color: '#6366f1', fontWeight: 700, touchAction: 'pan-y' }} onClick={() => setStudentDollarHistoryModal({ studentId: s.id, studentName: s.name })}>{s.name}</div>
                         <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 13, color: '#7c3aed',
                           background: '#f3e8ff', borderRadius: 6, padding: '4px 2px' }}>
                           ${s.dollars}
@@ -958,6 +958,7 @@ export default function AdminDashboard() {
                           color: '#b45309',
                           cursor: 'pointer',
                           border: editingHours === `${s.id}-weekly` ? '2px solid #b45309' : 'none',
+                          touchAction: 'pan-y',
                         }}
                       >
                         {editingHours === `${s.id}-weekly` ? (
@@ -985,6 +986,7 @@ export default function AdminDashboard() {
                           color: '#dc2626',
                           cursor: 'pointer',
                           border: editingHours === `${s.id}-monthly` ? '2px solid #dc2626' : 'none',
+                          touchAction: 'pan-y',
                         }}
                       >
                         {editingHours === `${s.id}-monthly` ? (
@@ -1068,10 +1070,10 @@ export default function AdminDashboard() {
 
       </div>
 
-      {testPopup && (
-        <div onMouseDown={() => setTestPopup(null)}
+            {testPopup && (
+        <div onPointerDown={() => setTestPopup(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-          <div onMouseDown={e => e.stopPropagation()}
+          <div onPointerDown={e => e.stopPropagation()}
             style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
@@ -1155,8 +1157,8 @@ export default function AdminDashboard() {
       )}
 
       {addTestPopup && (
-        <div onClick={() => setAddTestPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onPointerDown={() => setAddTestPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>시험 점수 입력</h3>
@@ -1214,8 +1216,8 @@ export default function AdminDashboard() {
       )}
 
       {makeupEditPopup && (
-        <div onMouseDown={() => setMakeupEditPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-          <div onMouseDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onPointerDown={() => setMakeupEditPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>보충 요청 상세</h3>

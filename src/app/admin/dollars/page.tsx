@@ -52,10 +52,25 @@ export default function DollarsPage() {
       .filter(r => r.studentId === studentId && r.week === week)
       .reduce((sum, r) => sum + r.shadowing + r.learningAttitude + r.basicAttitude, 0);
 
+  const getWeekDateRange = () => {
+    const match = week.match(/(\d{4})-w(\d{2})/);
+    if (!match) return { start: '', end: '' };
+    const [, year, weekNum] = match;
+    const jan4 = new Date(parseInt(year), 0, 4);
+    const weekStart = new Date(jan4);
+    weekStart.setDate(jan4.getDate() - jan4.getDay() + 1);
+    weekStart.setDate(weekStart.getDate() + (parseInt(weekNum) - 1) * 7);
+    const start = weekStart.toISOString().split('T')[0];
+    const end = new Date(weekStart);
+    end.setDate(weekStart.getDate() + 4);
+    return { start, end: end.toISOString().split('T')[0] };
+  };
+
   const getStatus = (studentId: string) => {
+    const { start, end } = getWeekDateRange();
     const weekHW = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week);
     const weekTest = state.testRecords.find(t => t.studentId === studentId && t.week === week);
-    const weekAtt = state.attendanceRecords.filter(a => a.studentId === studentId);
+    const weekAtt = state.attendanceRecords.filter(a => a.studentId === studentId && a.date >= start && a.date <= end);
     const attDays = weekAtt.filter(a => a.status !== 'absent').length;
     const homeworkDone = weekHW.some(h => h.status === 'approved');
     const attitudeScore = getAttitudeScore(studentId);
@@ -90,8 +105,9 @@ export default function DollarsPage() {
   };
 
   const getAchievementCounts = (studentId: string) => {
+    const { start, end } = getWeekDateRange();
     const total = getStudentScheduledDays(studentId);
-    const attendanceCount = state.attendanceRecords.filter(a => a.studentId === studentId && a.status !== 'absent').length;
+    const attendanceCount = state.attendanceRecords.filter(a => a.studentId === studentId && a.date >= start && a.date <= end && a.status !== 'absent').length;
     const homeworkCount = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week && h.status === 'approved').length;
     const testCount = state.testRecords.filter(t => t.studentId === studentId && t.week === week && t.status === 'confirmed').length;
     return { attendanceCount, homeworkCount, testCount, total };
