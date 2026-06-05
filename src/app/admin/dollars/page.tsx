@@ -104,7 +104,8 @@ export default function DollarsPage() {
     const weekDates = getWeekDates();
     const total = getStudentScheduledDays(studentId);
     const attendanceCount = state.attendanceRecords.filter(a => a.studentId === studentId && weekDates.includes(a.date) && a.status !== 'absent').length;
-    const homeworkCount = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week && h.status === 'approved').length;
+    // 이번 주의 모든 숙제 중 완료/승인된 것 카운트
+    const homeworkCount = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week && (h.status === 'confirmed' || h.status === 'approved')).length;
     const testCount = state.testRecords.filter(t => t.studentId === studentId && t.week === week && t.status === 'confirmed').length;
     return { attendanceCount, homeworkCount, testCount, total };
   };
