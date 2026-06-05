@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store';
 import { DollarSign, Award, CheckCircle, XCircle, Star, X, ShoppingCart, Plus, Trash2, Package } from 'lucide-react';
 import WeekSelector from '@/components/WeekSelector';
 import { ShopItem } from '@/lib/types';
-import { getWeekDateRange } from '@/lib/utils';
+import { getWeekDateRange, localDateStr } from '@/lib/utils';
 
 type AwardEntry = { name: string; amount: number };
 type Tab = 'award' | 'shop';
@@ -53,13 +53,20 @@ export default function DollarsPage() {
       .filter(r => r.studentId === studentId && r.week === week)
       .reduce((sum, r) => sum + r.shadowing + r.learningAttitude + r.basicAttitude, 0);
 
+  const getWeekDates = () => {
+    const { start } = getWeekDateRange(week);
+    return Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return localDateStr(d);
+    });
+  };
+
   const getStatus = (studentId: string) => {
-    const { start, end } = getWeekDateRange(week);
-    const startStr = start.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
+    const weekDates = getWeekDates();
     const weekHW = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week);
     const weekTest = state.testRecords.find(t => t.studentId === studentId && t.week === week);
-    const weekAtt = state.attendanceRecords.filter(a => a.studentId === studentId && a.date >= startStr && a.date <= endStr);
+    const weekAtt = state.attendanceRecords.filter(a => a.studentId === studentId && weekDates.includes(a.date));
     const attDays = weekAtt.filter(a => a.status !== 'absent').length;
     const homeworkDone = weekHW.some(h => h.status === 'approved');
     const attitudeScore = getAttitudeScore(studentId);
@@ -94,11 +101,9 @@ export default function DollarsPage() {
   };
 
   const getAchievementCounts = (studentId: string) => {
-    const { start, end } = getWeekDateRange(week);
-    const startStr = start.toISOString().split('T')[0];
-    const endStr = end.toISOString().split('T')[0];
+    const weekDates = getWeekDates();
     const total = getStudentScheduledDays(studentId);
-    const attendanceCount = state.attendanceRecords.filter(a => a.studentId === studentId && a.date >= startStr && a.date <= endStr && a.status !== 'absent').length;
+    const attendanceCount = state.attendanceRecords.filter(a => a.studentId === studentId && weekDates.includes(a.date) && a.status !== 'absent').length;
     const homeworkCount = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week && h.status === 'approved').length;
     const testCount = state.testRecords.filter(t => t.studentId === studentId && t.week === week && t.status === 'confirmed').length;
     return { attendanceCount, homeworkCount, testCount, total };
