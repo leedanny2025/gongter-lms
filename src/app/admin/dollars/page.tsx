@@ -5,7 +5,7 @@ import { useStore } from '@/lib/store';
 import { DollarSign, Award, CheckCircle, XCircle, Star, X, ShoppingCart, Plus, Trash2, Package } from 'lucide-react';
 import WeekSelector from '@/components/WeekSelector';
 import { ShopItem } from '@/lib/types';
-import { getWeekDateRange, localDateStr } from '@/lib/utils';
+import { getWeekDateRange, localDateStr, getPrevWeek } from '@/lib/utils';
 
 type AwardEntry = { name: string; amount: number };
 type Tab = 'award' | 'shop';
@@ -135,6 +135,28 @@ export default function DollarsPage() {
       .reduce((sum, p) => sum + p.cost, 0);
 
     return { awarded: expectedAwarded, purchased: weeklyPurchased };
+  };
+
+  const getPrevWeekDollars = (studentId: string) => {
+    const prevWeek = getPrevWeek(week);
+    const { start } = getWeekDateRange(prevWeek);
+    const prevWeekDates = Array.from({ length: 5 }, (_, i) => {
+      const d = new Date(start);
+      d.setDate(start.getDate() + i);
+      return localDateStr(d);
+    });
+
+    // 지난 주 실제 지급액
+    const prevAwarded = (state.awardRecords || [])
+      .filter(a => a.studentId === studentId && prevWeekDates.includes(a.awardedAt.split('T')[0]))
+      .reduce((sum, a) => sum + a.amount, 0);
+
+    // 지난 주 실제 구매액
+    const prevPurchased = (state.purchases || [])
+      .filter(p => p.studentId === studentId && prevWeekDates.includes(p.purchasedAt.split('T')[0]))
+      .reduce((sum, p) => sum + p.cost, 0);
+
+    return { awarded: prevAwarded, purchased: prevPurchased };
   };
 
   const getMonthlyDollars = (studentId: string) => {
@@ -417,6 +439,7 @@ export default function DollarsPage() {
                       <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>⭐ 보너스</th>
                     )}
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#16a34a', fontSize: 13 }}>이번 주</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#8b5cf6', fontSize: 13 }}>지난 주</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#059669', fontSize: 13 }}>월별 누적</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>총 보유</th>
                   </tr>
@@ -456,6 +479,18 @@ export default function DollarsPage() {
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                           {(() => {
                             const { awarded, purchased } = getWeeklyDollarBreakdown(student.id);
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                                {awarded > 0 && <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 13 }}>+${awarded}</span>}
+                                {purchased > 0 && <span style={{ fontWeight: 800, color: '#ef4444', fontSize: 13 }}>-${purchased}</span>}
+                                {awarded === 0 && purchased === 0 && <span style={{ fontWeight: 800, color: '#94a3b8', fontSize: 13 }}>–</span>}
+                              </div>
+                            );
+                          })()}
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          {(() => {
+                            const { awarded, purchased } = getPrevWeekDollars(student.id);
                             return (
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                                 {awarded > 0 && <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 13 }}>+${awarded}</span>}
