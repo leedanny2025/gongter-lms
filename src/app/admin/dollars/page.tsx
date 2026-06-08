@@ -124,14 +124,26 @@ export default function DollarsPage() {
     const now = new Date();
     const currentMonth = now.getMonth();
     const currentYear = now.getFullYear();
-    const monthlyTotal = (state.awardRecords || [])
+
+    // 달러 지급 합계
+    const awardedAmount = (state.awardRecords || [])
       .filter(a => {
         if (a.studentId !== studentId) return false;
         const awardDate = new Date(a.awardedAt);
         return awardDate.getMonth() === currentMonth && awardDate.getFullYear() === currentYear;
       })
       .reduce((sum, a) => sum + a.amount, 0);
-    return monthlyTotal;
+
+    // 달러 구매 차감
+    const purchasedAmount = (state.purchases || [])
+      .filter(p => {
+        if (p.studentId !== studentId) return false;
+        const purchaseDate = new Date(p.purchasedAt);
+        return purchaseDate.getMonth() === currentMonth && purchaseDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, p) => sum + p.cost, 0);
+
+    return awardedAmount - purchasedAmount;
   };
 
   const toggleSelect = (id: string) => {
