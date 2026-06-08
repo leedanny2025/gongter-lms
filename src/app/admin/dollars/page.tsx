@@ -120,6 +120,22 @@ export default function DollarsPage() {
     return (state.awardRecords || []).some(a => a.studentId === studentId && a.week === week);
   };
 
+  const getWeeklyDollarBreakdown = (studentId: string) => {
+    const weekDates = getWeekDates();
+
+    // 이번 주 지급액
+    const weeklyAwarded = (state.awardRecords || [])
+      .filter(a => a.studentId === studentId && weekDates.includes(a.awardedAt.split('T')[0]))
+      .reduce((sum, a) => sum + a.amount, 0);
+
+    // 이번 주 구매액
+    const weeklyPurchased = (state.purchases || [])
+      .filter(p => p.studentId === studentId && weekDates.includes(p.purchasedAt.split('T')[0]))
+      .reduce((sum, p) => sum + p.cost, 0);
+
+    return { awarded: weeklyAwarded, purchased: weeklyPurchased };
+  };
+
   const getMonthlyDollars = (studentId: string) => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -437,9 +453,16 @@ export default function DollarsPage() {
                           </td>
                         )}
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                          <span style={{ fontWeight: 800, color: amount > 0 ? '#16a34a' : '#94a3b8', fontSize: 15 }}>
-                            +${amount}
-                          </span>
+                          {(() => {
+                            const { awarded, purchased } = getWeeklyDollarBreakdown(student.id);
+                            return (
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
+                                {awarded > 0 && <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 13 }}>+${awarded}</span>}
+                                {purchased > 0 && <span style={{ fontWeight: 800, color: '#ef4444', fontSize: 13 }}>-${purchased}</span>}
+                                {awarded === 0 && purchased === 0 && <span style={{ fontWeight: 800, color: '#94a3b8', fontSize: 13 }}>–</span>}
+                              </div>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                           <span style={{ fontWeight: 800, color: '#059669', fontSize: 15 }}>

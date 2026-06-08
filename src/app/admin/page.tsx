@@ -413,9 +413,10 @@ export default function AdminDashboard() {
     if (type === 'homework') return state.dayHomeworks.some(h => h.studentId === studentId && h.week === week && h.status === 'approved');
     if (type === 'test') return state.testRecords.some(t => t.studentId === studentId && weekDates.includes(t.date) && t.status === 'confirmed');
     if (type === 'attitude') {
-      const score = (state.attitudeRecords || [])
-        .filter(r => r.studentId === studentId && r.week === week)
-        .reduce((sum, r) => sum + r.shadowing + r.learningAttitude + r.basicAttitude, 0);
+      const records = (state.attitudeRecords || []).filter(r => r.studentId === studentId && r.week === week);
+      const basicScore = records.reduce((sum, r) => sum + r.basicAttitude, 0);
+      const learningScore = records.reduce((sum, r) => sum + r.learningAttitude, 0);
+      const score = basicScore + learningScore;
       return score >= (state.attitudeDollarSettings.tier3.minScore || 1);
     }
     return false;
