@@ -431,8 +431,9 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
     ? student.scheduleDays
     : Array.from(new Set(state.students.flatMap(s => s.scheduleDays || [])));
 
-  const totalPositive = attitudeRecs.reduce((s, a) => s + Math.max(0, a.shadowing) + Math.max(0, a.learningAttitude) + Math.max(0, a.basicAttitude), 0);
-  const totalNegative = attitudeRecs.reduce((s, a) => s + Math.min(0, a.shadowing) + Math.min(0, a.learningAttitude) + Math.min(0, a.basicAttitude), 0);
+  // 기본태도와 학습태도만 계산 (shadowing 제외)
+  const totalPositive = attitudeRecs.reduce((s, a) => s + Math.max(0, a.learningAttitude) + Math.max(0, a.basicAttitude), 0);
+  const totalNegative = attitudeRecs.reduce((s, a) => s + Math.min(0, a.learningAttitude) + Math.min(0, a.basicAttitude), 0);
   const attitudeNet = totalPositive + totalNegative;
   const presentDays = attRecs.filter(r => r.status === 'present' || r.status === 'late').length;
   const scheduledCount = scheduledDays.filter(d => DAY_ORDER.includes(d as typeof DAY_ORDER[number])).length;

@@ -121,19 +121,20 @@ export default function DollarsPage() {
   };
 
   const getWeeklyDollarBreakdown = (studentId: string) => {
+    // 예상 지급액
+    const expectedAwarded = calcDollars(studentId);
+
+    // 이번 주 실제 구매액
     const weekDates = getWeekDates();
-
-    // 이번 주 지급액
-    const weeklyAwarded = (state.awardRecords || [])
-      .filter(a => a.studentId === studentId && weekDates.includes(a.awardedAt.split('T')[0]))
-      .reduce((sum, a) => sum + a.amount, 0);
-
-    // 이번 주 구매액
     const weeklyPurchased = (state.purchases || [])
-      .filter(p => p.studentId === studentId && weekDates.includes(p.purchasedAt.split('T')[0]))
+      .filter(p => {
+        if (p.studentId !== studentId) return false;
+        const pDate = p.purchasedAt.split('T')[0];
+        return weekDates.includes(pDate);
+      })
       .reduce((sum, p) => sum + p.cost, 0);
 
-    return { awarded: weeklyAwarded, purchased: weeklyPurchased };
+    return { awarded: expectedAwarded, purchased: weeklyPurchased };
   };
 
   const getMonthlyDollars = (studentId: string) => {
