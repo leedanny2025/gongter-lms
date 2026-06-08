@@ -476,8 +476,8 @@ export default function TestsPage() {
         ))}
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-        <table>
+      <div className="card" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+        <table style={{ minWidth: '100%' }}>
           <thead>
             <tr>
               <th>학생</th>
