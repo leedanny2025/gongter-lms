@@ -120,6 +120,20 @@ export default function DollarsPage() {
     return (state.awardRecords || []).some(a => a.studentId === studentId && a.week === week);
   };
 
+  const getMonthlyDollars = (studentId: string) => {
+    const now = new Date();
+    const currentMonth = now.getMonth();
+    const currentYear = now.getFullYear();
+    const monthlyTotal = (state.awardRecords || [])
+      .filter(a => {
+        if (a.studentId !== studentId) return false;
+        const awardDate = new Date(a.awardedAt);
+        return awardDate.getMonth() === currentMonth && awardDate.getFullYear() === currentYear;
+      })
+      .reduce((sum, a) => sum + a.amount, 0);
+    return monthlyTotal;
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -374,6 +388,7 @@ export default function DollarsPage() {
                       <th style={{ padding: '12px 14px', textAlign: 'center', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>⭐ 보너스</th>
                     )}
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#16a34a', fontSize: 13 }}>이번 주</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#059669', fontSize: 13 }}>월별 누적</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>총 보유</th>
                   </tr>
                 </thead>
@@ -412,6 +427,11 @@ export default function DollarsPage() {
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                           <span style={{ fontWeight: 800, color: amount > 0 ? '#16a34a' : '#94a3b8', fontSize: 15 }}>
                             +${amount}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, color: '#059669', fontSize: 15 }}>
+                            ${getMonthlyDollars(student.id)}
                           </span>
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
