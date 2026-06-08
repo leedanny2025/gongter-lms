@@ -405,7 +405,7 @@ export default function DollarsPage() {
           </div>
 
           {viewMode === 'table' && (
-            <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', minHeight: 'auto', display: 'block', width: '100%' }}>
+            <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', minHeight: 'auto', display: 'block', width: '100%' }}>
               <table style={{ width: 'auto', minWidth: '100%', borderCollapse: 'collapse', fontSize: 14, touchAction: 'auto', tableLayout: 'auto' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
