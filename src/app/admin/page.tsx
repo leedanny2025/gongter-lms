@@ -279,9 +279,8 @@ export default function AdminDashboard() {
             let total = 0;
             const enabledConditions = state.dollarConditions.filter(c => c.enabled);
             const basicConditions = enabledConditions.filter(c => ['attendance', 'homework', 'test'].includes(c.type));
-            const bonusConditions = enabledConditions.filter(c => ['attitude', 'custom'].includes(c.type));
 
-            // 기본 조건 계산 (간략화 - 실제로는 calcWeeklyDollars와 동일해야 함)
+            // 기본 조건 계산
             basicConditions.forEach(c => {
               if (c.type === 'attendance') {
                 const presentCount = state.attendanceRecords.filter(a => a.studentId === student.id && a.status !== 'absent').length;
@@ -291,7 +290,11 @@ export default function AdminDashboard() {
             });
 
             if (total !== student.weeklyPendingDollars) {
-              dispatch({ type: 'UPDATE_STUDENT', payload: { ...student, weeklyPendingDollars: total } });
+              // 최신 state에서 학생 찾아서 업데이트 (dollars 손실 방지)
+              const latestStudent = state.students.find(s => s.id === student.id);
+              if (latestStudent) {
+                dispatch({ type: 'UPDATE_STUDENT', payload: { ...latestStudent, weeklyPendingDollars: total } });
+              }
             }
           }
         });
@@ -299,7 +302,7 @@ export default function AdminDashboard() {
     };
 
     checkAndUpdatePendingDollars();
-  }, [state.currentWeek, state.students, state.dollarConditions, state.attendanceRecords, dispatch]);
+  }, [state.currentWeek, state.dollarConditions, state.attendanceRecords, dispatch]);
 
   const handleWeekChange = (w: string) => {
     setWeek(w);
