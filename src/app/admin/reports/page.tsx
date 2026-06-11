@@ -432,8 +432,18 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
     : Array.from(new Set(state.students.flatMap(s => s.scheduleDays || [])));
 
   // 기본태도와 학습태도만 계산 (shadowing 제외)
-  const totalPositive = attitudeRecs.reduce((s, a) => s + Math.max(0, a.learningAttitude) + Math.max(0, a.basicAttitude), 0);
-  const totalNegative = attitudeRecs.reduce((s, a) => s + Math.min(0, a.learningAttitude) + Math.min(0, a.basicAttitude), 0);
+  // 긍정: 각 항목의 양수만 합산
+  const totalPositive = attitudeRecs.reduce((s, a) => {
+    const learningPos = a.learningAttitude > 0 ? a.learningAttitude : 0;
+    const basicPos = a.basicAttitude > 0 ? a.basicAttitude : 0;
+    return s + learningPos + basicPos;
+  }, 0);
+  // 부정: 각 항목의 음수만 합산 (절댓값으로 표시)
+  const totalNegative = attitudeRecs.reduce((s, a) => {
+    const learningNeg = a.learningAttitude < 0 ? a.learningAttitude : 0;
+    const basicNeg = a.basicAttitude < 0 ? a.basicAttitude : 0;
+    return s + learningNeg + basicNeg;
+  }, 0);
   const attitudeNet = totalPositive + totalNegative;
   const presentDays = attRecs.filter(r => r.status === 'present' || r.status === 'late').length;
   const scheduledCount = scheduledDays.filter(d => DAY_ORDER.includes(d as typeof DAY_ORDER[number])).length;
