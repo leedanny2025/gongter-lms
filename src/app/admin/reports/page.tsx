@@ -663,18 +663,14 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
     const hwDone = hw.filter(h => h.status === 'confirmed' || h.status === 'approved').length;
     const confirmedTests = tests.filter(t => t.status === 'confirmed' && t.score !== null);
     const avgScore = confirmedTests.length > 0 ? Math.round(confirmedTests.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / confirmedTests.length) : null;
-    // 기본태도와 학습태도만 계산 (shadowing 제외)
-    const pos = attitude.reduce((s, a) => {
-      const learningPos = a.learningAttitude > 0 ? a.learningAttitude : 0;
-      const basicPos = a.basicAttitude > 0 ? a.basicAttitude : 0;
-      return s + learningPos + basicPos;
-    }, 0);
-    const neg = attitude.reduce((s, a) => {
-      const learningNeg = a.learningAttitude < 0 ? a.learningAttitude : 0;
-      const basicNeg = a.basicAttitude < 0 ? a.basicAttitude : 0;
-      return s + learningNeg + basicNeg;
-    }, 0);
-    return { week, present: presentDays, scheduled: scheduledCount, hwDone, hwTotal: hw.length, avgScore, pos, neg, net: pos + neg };
+    // 기본태도와 학습태도를 각각 따로 계산 (shadowing 제외)
+    const basicPos = attitude.reduce((s, a) => s + (a.basicAttitude > 0 ? a.basicAttitude : 0), 0);
+    const basicNeg = attitude.reduce((s, a) => s + (a.basicAttitude < 0 ? a.basicAttitude : 0), 0);
+    const learningPos = attitude.reduce((s, a) => s + (a.learningAttitude > 0 ? a.learningAttitude : 0), 0);
+    const learningNeg = attitude.reduce((s, a) => s + (a.learningAttitude < 0 ? a.learningAttitude : 0), 0);
+    const pos = basicPos + learningPos;
+    const neg = basicNeg + learningNeg;
+    return { week, present: presentDays, scheduled: scheduledCount, hwDone, hwTotal: hw.length, avgScore, pos, neg, net: pos + neg, basicPos, basicNeg, learningPos, learningNeg };
   });
 
   const totalPresent = weekData.reduce((s, w) => s + w.present, 0);
@@ -683,8 +679,12 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
   const totalHwAll = weekData.reduce((s, w) => s + w.hwTotal, 0);
   const allTests = state.testRecords.filter(t => t.studentId === studentId && t.status === 'confirmed' && t.score !== null && weeks.some(w => t.week === w));
   const monthAvgPct = allTests.length > 0 ? Math.round(allTests.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / allTests.length) : null;
-  const totalPos = weekData.reduce((s, w) => s + w.pos, 0);
-  const totalNeg = weekData.reduce((s, w) => s + w.neg, 0);
+  const basicPositive = weekData.reduce((s, w) => s + w.basicPos, 0);
+  const basicNegative = weekData.reduce((s, w) => s + w.basicNeg, 0);
+  const learningPositive = weekData.reduce((s, w) => s + w.learningPos, 0);
+  const learningNegative = weekData.reduce((s, w) => s + w.learningNeg, 0);
+  const totalPos = basicPositive + learningPositive;
+  const totalNeg = basicNegative + learningNegative;
   const attitudeNet = totalPos + totalNeg;
   const attRate = totalScheduled > 0 ? Math.round((totalPresent / totalScheduled) * 100) : 0;
   const hwRate = totalHwAll > 0 ? Math.round((totalHwDone / totalHwAll) * 100) : 0;
@@ -707,7 +707,7 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
       <div ref={printRef as React.RefObject<HTMLDivElement>} style={{ display: 'none' }}>
         <PrintReport student={student} periodLabel={monthLabel(monthKey)} isMonthly={true}
           dateRange={`${weeks.length}주 분량`} sections={sections}
-          reportData={{ attRecs: [], hwRecs: [], testRecs: allTests, attitudeNet, totalPositive: totalPos, totalNegative: totalNeg, teacherNotes: notes, teacherRequests: requests, scheduledDays, weekRows: weekRows4Print }} />
+          reportData={{ attRecs: [], hwRecs: [], testRecs: allTests, attitudeNet, totalPositive: totalPos, totalNegative: totalNeg, basicPositive, basicNegative, learningPositive, learningNegative, teacherNotes: notes, teacherRequests: requests, scheduledDays, weekRows: weekRows4Print }} />
       </div>
 
       {/* 화면 요약 카드 */}
