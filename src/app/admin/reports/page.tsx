@@ -665,8 +665,17 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
     const hwDone = hw.filter(h => h.status === 'confirmed' || h.status === 'approved').length;
     const confirmedTests = tests.filter(t => t.status === 'confirmed' && t.score !== null);
     const avgScore = confirmedTests.length > 0 ? Math.round(confirmedTests.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / confirmedTests.length) : null;
-    const pos = attitude.reduce((s, a) => s + Math.max(0, a.shadowing) + Math.max(0, a.learningAttitude) + Math.max(0, a.basicAttitude), 0);
-    const neg = attitude.reduce((s, a) => s + Math.min(0, a.shadowing) + Math.min(0, a.learningAttitude) + Math.min(0, a.basicAttitude), 0);
+    // 기본태도와 학습태도만 계산 (shadowing 제외)
+    const pos = attitude.reduce((s, a) => {
+      const learningPos = a.learningAttitude > 0 ? a.learningAttitude : 0;
+      const basicPos = a.basicAttitude > 0 ? a.basicAttitude : 0;
+      return s + learningPos + basicPos;
+    }, 0);
+    const neg = attitude.reduce((s, a) => {
+      const learningNeg = a.learningAttitude < 0 ? a.learningAttitude : 0;
+      const basicNeg = a.basicAttitude < 0 ? a.basicAttitude : 0;
+      return s + learningNeg + basicNeg;
+    }, 0);
     return { week, present: presentDays, scheduled: scheduledCount, hwDone, hwTotal: hw.length, avgScore, pos, neg, net: pos + neg };
   });
 
