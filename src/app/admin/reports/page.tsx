@@ -75,6 +75,8 @@ function PrintReport({ student, periodLabel, isMonthly, dateRange, sections, rep
     hwRecs: { day: string; status: string; cats: string[] }[];
     testRecs: { subject: string; score: number | null; maxScore: number; status: string }[];
     attitudeNet: number; totalPositive: number; totalNegative: number;
+    basicPositive?: number; basicNegative?: number;
+    learningPositive?: number; learningNegative?: number;
     teacherNotes: string; teacherRequests: string;
     scheduledDays: string[];
     weekRows?: { wLabel: string; present: number; scheduled: number; hwDone: number; hwTotal: number; avgScore: number | null; net: number }[];
@@ -144,7 +146,7 @@ function PrintReport({ student, periodLabel, isMonthly, dateRange, sections, rep
             { label: '출석률', value: sections.attendance ? `${attRate}%` : '–', sub: sections.attendance ? `${attPresent}/${attTotal}일` : '' },
             { label: '숙제 완료율', value: sections.homework ? `${hwRate}%` : '–', sub: sections.homework ? `${hwDone}/${hwTotal}건` : '' },
             { label: '시험 평균', value: sections.tests && avgPct !== null ? `${avgPct}%` : '–', sub: sections.tests && avgPct !== null ? scoreGrade(avgPct) + '등급' : '' },
-            { label: '태도 점수', value: sections.attitude ? (reportData.attitudeNet >= 0 ? `+${reportData.attitudeNet}` : String(reportData.attitudeNet)) : '–', sub: sections.attitude ? `긍정 +${reportData.totalPositive} / 부정 ${reportData.totalNegative}` : '' },
+            { label: '태도 점수', value: sections.attitude ? (reportData.attitudeNet >= 0 ? `+${reportData.attitudeNet}` : String(reportData.attitudeNet)) : '–', sub: sections.attitude ? `기본: ${reportData.basicPositive || 0}${(reportData.basicNegative || 0) !== 0 ? '/' + (reportData.basicNegative || 0) : ''} | 학습: ${reportData.learningPositive || 0}${(reportData.learningNegative || 0) !== 0 ? '/' + (reportData.learningNegative || 0) : ''}` : '' },
           ].map((item, i) => (
             <div key={i} style={{ padding: '10px 12px', borderRight: i < 3 ? '1px solid #dde4ed' : 'none', textAlign: 'center' }}>
               <div style={{ fontSize: 8, color: '#6b7280', fontWeight: 700, marginBottom: 4 }}>{item.label}</div>
@@ -431,19 +433,15 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
     ? student.scheduleDays
     : Array.from(new Set(state.students.flatMap(s => s.scheduleDays || [])));
 
-  // 기본태도와 학습태도만 계산 (shadowing 제외)
-  // 긍정: 각 항목의 양수만 합산
-  const totalPositive = attitudeRecs.reduce((s, a) => {
-    const learningPos = a.learningAttitude > 0 ? a.learningAttitude : 0;
-    const basicPos = a.basicAttitude > 0 ? a.basicAttitude : 0;
-    return s + learningPos + basicPos;
-  }, 0);
-  // 부정: 각 항목의 음수만 합산 (절댓값으로 표시)
-  const totalNegative = attitudeRecs.reduce((s, a) => {
-    const learningNeg = a.learningAttitude < 0 ? a.learningAttitude : 0;
-    const basicNeg = a.basicAttitude < 0 ? a.basicAttitude : 0;
-    return s + learningNeg + basicNeg;
-  }, 0);
+  // 기본태도와 학습태도를 각각 따로 계산
+  const basicPositive = attitudeRecs.reduce((s, a) => s + (a.basicAttitude > 0 ? a.basicAttitude : 0), 0);
+  const basicNegative = attitudeRecs.reduce((s, a) => s + (a.basicAttitude < 0 ? a.basicAttitude : 0), 0);
+  const learningPositive = attitudeRecs.reduce((s, a) => s + (a.learningAttitude > 0 ? a.learningAttitude : 0), 0);
+  const learningNegative = attitudeRecs.reduce((s, a) => s + (a.learningAttitude < 0 ? a.learningAttitude : 0), 0);
+
+  // 합계
+  const totalPositive = basicPositive + learningPositive;
+  const totalNegative = basicNegative + learningNegative;
   const attitudeNet = totalPositive + totalNegative;
   const presentDays = attRecs.filter(r => r.status === 'present' || r.status === 'late').length;
   const scheduledCount = scheduledDays.filter(d => DAY_ORDER.includes(d as typeof DAY_ORDER[number])).length;
@@ -479,7 +477,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
         <PrintReport student={student} periodLabel={weekLabel} isMonthly={false}
           dateRange={`${start.getMonth() + 1}/${start.getDate()} ~ ${end.getMonth() + 1}/${end.getDate()}`}
           sections={sections}
-          reportData={{ attRecs: attRec4Print, hwRecs: hw4Print, testRecs, attitudeNet, totalPositive, totalNegative, teacherNotes: notes, teacherRequests: requests, scheduledDays }} />
+          reportData={{ attRecs: attRec4Print, hwRecs: hw4Print, testRecs, attitudeNet, totalPositive, totalNegative, basicPositive, basicNegative, learningPositive, learningNegative, teacherNotes: notes, teacherRequests: requests, scheduledDays }} />
       </div>
 
       {/* 화면 요약 카드 */}
