@@ -77,6 +77,7 @@ function PrintReport({ student, periodLabel, isMonthly, dateRange, sections, rep
     attitudeNet: number; totalPositive: number; totalNegative: number;
     basicPositive?: number; basicNegative?: number;
     learningPositive?: number; learningNegative?: number;
+    shadowingPositive?: number; shadowingNegative?: number;
     teacherNotes: string; teacherRequests: string;
     scheduledDays: string[];
     weekRows?: { wLabel: string; present: number; scheduled: number; hwDone: number; hwTotal: number; avgScore: number | null; net: number }[];
@@ -146,7 +147,7 @@ function PrintReport({ student, periodLabel, isMonthly, dateRange, sections, rep
             { label: '출석률', value: sections.attendance ? `${attRate}%` : '–', sub: sections.attendance ? `${attPresent}/${attTotal}일` : '' },
             { label: '숙제 완료율', value: sections.homework ? `${hwRate}%` : '–', sub: sections.homework ? `${hwDone}/${hwTotal}건` : '' },
             { label: '시험 평균', value: sections.tests && avgPct !== null ? `${avgPct}%` : '–', sub: sections.tests && avgPct !== null ? scoreGrade(avgPct) + '등급' : '' },
-            { label: '태도 점수', value: sections.attitude ? (reportData.attitudeNet >= 0 ? `+${reportData.attitudeNet}` : String(reportData.attitudeNet)) : '–', sub: sections.attitude ? `기본: +${reportData.basicPositive ?? 0}${reportData.basicNegative ? '/' + reportData.basicNegative : ''} | 학습: +${reportData.learningPositive ?? 0}${reportData.learningNegative ? '/' + reportData.learningNegative : ''}` : '' },
+            { label: '태도 점수', value: sections.attitude ? (reportData.attitudeNet >= 0 ? `+${reportData.attitudeNet}` : String(reportData.attitudeNet)) : '–', sub: sections.attitude ? `쉐도잉: +${reportData.shadowingPositive ?? 0}${reportData.shadowingNegative ? '/' + reportData.shadowingNegative : ''} | 기본: +${reportData.basicPositive ?? 0}${reportData.basicNegative ? '/' + reportData.basicNegative : ''} | 학습: +${reportData.learningPositive ?? 0}${reportData.learningNegative ? '/' + reportData.learningNegative : ''}` : '' },
           ].map((item, i) => (
             <div key={i} style={{ padding: '10px 12px', borderRight: i < 3 ? '1px solid #dde4ed' : 'none', textAlign: 'center' }}>
               <div style={{ fontSize: 8, color: '#6b7280', fontWeight: 700, marginBottom: 4 }}>{item.label}</div>
@@ -433,11 +434,13 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
     ? student.scheduleDays
     : Array.from(new Set(state.students.flatMap(s => s.scheduleDays || [])));
 
-  // 기본태도와 학습태도를 각각 따로 계산
+  // 태도별 점수 계산 (shadowing, 기본태도, 학습태도)
   const basicPositive = attitudeRecs.reduce((s, a) => s + (a.basicAttitude > 0 ? a.basicAttitude : 0), 0);
   const basicNegative = attitudeRecs.reduce((s, a) => s + (a.basicAttitude < 0 ? a.basicAttitude : 0), 0);
   const learningPositive = attitudeRecs.reduce((s, a) => s + (a.learningAttitude > 0 ? a.learningAttitude : 0), 0);
   const learningNegative = attitudeRecs.reduce((s, a) => s + (a.learningAttitude < 0 ? a.learningAttitude : 0), 0);
+  const shadowingPositive = attitudeRecs.reduce((s, a) => s + (a.shadowing > 0 ? a.shadowing : 0), 0);
+  const shadowingNegative = attitudeRecs.reduce((s, a) => s + (a.shadowing < 0 ? a.shadowing : 0), 0);
 
   // 합계
   const totalPositive = basicPositive + learningPositive;
@@ -477,7 +480,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
         <PrintReport student={student} periodLabel={weekLabel} isMonthly={false}
           dateRange={`${start.getMonth() + 1}/${start.getDate()} ~ ${end.getMonth() + 1}/${end.getDate()}`}
           sections={sections}
-          reportData={{ attRecs: attRec4Print, hwRecs: hw4Print, testRecs, attitudeNet, totalPositive, totalNegative, basicPositive, basicNegative, learningPositive, learningNegative, teacherNotes: notes, teacherRequests: requests, scheduledDays }} />
+          reportData={{ attRecs: attRec4Print, hwRecs: hw4Print, testRecs, attitudeNet, totalPositive, totalNegative, basicPositive, basicNegative, learningPositive, learningNegative, shadowingPositive, shadowingNegative, teacherNotes: notes, teacherRequests: requests, scheduledDays }} />
       </div>
 
       {/* 화면 요약 카드 */}
@@ -486,7 +489,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
           { label: '출석', value: `${presentDays}/${scheduledCount}일`, sub: scheduledCount > 0 ? `${Math.round(presentDays / scheduledCount * 100)}%` : '–' },
           { label: '숙제 완료', value: `${hwDone}/${hwRecs.length}건`, sub: hwRecs.length > 0 ? `${Math.round(hwDone / hwRecs.length * 100)}%` : '–' },
           { label: '시험 평균', value: avgPct !== null ? `${avgPct}%` : '–', sub: avgPct !== null ? scoreGrade(avgPct) + '등급' : '응시 없음' },
-          { label: '태도 점수', value: attitudeNet >= 0 ? `+${attitudeNet}` : String(attitudeNet), sub: `기본: +${basicPositive}${basicNegative ? '/' + basicNegative : ''} | 학습: +${learningPositive}${learningNegative ? '/' + learningNegative : ''}` },
+          { label: '태도 점수', value: attitudeNet >= 0 ? `+${attitudeNet}` : String(attitudeNet), sub: `쉐도잉: +${shadowingPositive}${shadowingNegative ? '/' + shadowingNegative : ''} | 기본: +${basicPositive}${basicNegative ? '/' + basicNegative : ''} | 학습: +${learningPositive}${learningNegative ? '/' + learningNegative : ''}` },
         ].map(item => (
           <div key={item.label} style={{ background: 'white', borderRadius: 12, padding: '14px 16px', border: '1px solid #e2e8f0', borderTop: '3px solid #0f2a52' }}>
             <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, marginBottom: 6 }}>{item.label}</div>
@@ -663,14 +666,16 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
     const hwDone = hw.filter(h => h.status === 'confirmed' || h.status === 'approved').length;
     const confirmedTests = tests.filter(t => t.status === 'confirmed' && t.score !== null);
     const avgScore = confirmedTests.length > 0 ? Math.round(confirmedTests.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / confirmedTests.length) : null;
-    // 기본태도와 학습태도를 각각 따로 계산 (shadowing 제외)
+    // 태도 점수 계산 (쉐도잉, 기본태도, 학습태도)
+    const shadowingPos = attitude.reduce((s, a) => s + (a.shadowing > 0 ? a.shadowing : 0), 0);
+    const shadowingNeg = attitude.reduce((s, a) => s + (a.shadowing < 0 ? a.shadowing : 0), 0);
     const basicPos = attitude.reduce((s, a) => s + (a.basicAttitude > 0 ? a.basicAttitude : 0), 0);
     const basicNeg = attitude.reduce((s, a) => s + (a.basicAttitude < 0 ? a.basicAttitude : 0), 0);
     const learningPos = attitude.reduce((s, a) => s + (a.learningAttitude > 0 ? a.learningAttitude : 0), 0);
     const learningNeg = attitude.reduce((s, a) => s + (a.learningAttitude < 0 ? a.learningAttitude : 0), 0);
-    const pos = basicPos + learningPos;
-    const neg = basicNeg + learningNeg;
-    return { week, present: presentDays, scheduled: scheduledCount, hwDone, hwTotal: hw.length, avgScore, pos, neg, net: pos + neg, basicPos, basicNeg, learningPos, learningNeg };
+    const pos = shadowingPos + basicPos + learningPos;
+    const neg = shadowingNeg + basicNeg + learningNeg;
+    return { week, present: presentDays, scheduled: scheduledCount, hwDone, hwTotal: hw.length, avgScore, pos, neg, net: pos + neg, shadowingPos, shadowingNeg, basicPos, basicNeg, learningPos, learningNeg };
   });
 
   const totalPresent = weekData.reduce((s, w) => s + w.present, 0);
@@ -679,12 +684,14 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
   const totalHwAll = weekData.reduce((s, w) => s + w.hwTotal, 0);
   const allTests = state.testRecords.filter(t => t.studentId === studentId && t.status === 'confirmed' && t.score !== null && weeks.some(w => t.week === w));
   const monthAvgPct = allTests.length > 0 ? Math.round(allTests.reduce((s, t) => s + (t.score! / t.maxScore) * 100, 0) / allTests.length) : null;
+  const shadowingPositive = weekData.reduce((s, w) => s + w.shadowingPos, 0);
+  const shadowingNegative = weekData.reduce((s, w) => s + w.shadowingNeg, 0);
   const basicPositive = weekData.reduce((s, w) => s + w.basicPos, 0);
   const basicNegative = weekData.reduce((s, w) => s + w.basicNeg, 0);
   const learningPositive = weekData.reduce((s, w) => s + w.learningPos, 0);
   const learningNegative = weekData.reduce((s, w) => s + w.learningNeg, 0);
-  const totalPos = basicPositive + learningPositive;
-  const totalNeg = basicNegative + learningNegative;
+  const totalPos = shadowingPositive + basicPositive + learningPositive;
+  const totalNeg = shadowingNegative + basicNegative + learningNegative;
   const attitudeNet = totalPos + totalNeg;
   const attRate = totalScheduled > 0 ? Math.round((totalPresent / totalScheduled) * 100) : 0;
   const hwRate = totalHwAll > 0 ? Math.round((totalHwDone / totalHwAll) * 100) : 0;
@@ -707,7 +714,7 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
       <div ref={printRef as React.RefObject<HTMLDivElement>} style={{ display: 'none' }}>
         <PrintReport student={student} periodLabel={monthLabel(monthKey)} isMonthly={true}
           dateRange={`${weeks.length}주 분량`} sections={sections}
-          reportData={{ attRecs: [], hwRecs: [], testRecs: allTests, attitudeNet, totalPositive: totalPos, totalNegative: totalNeg, basicPositive, basicNegative, learningPositive, learningNegative, teacherNotes: notes, teacherRequests: requests, scheduledDays, weekRows: weekRows4Print }} />
+          reportData={{ attRecs: [], hwRecs: [], testRecs: allTests, attitudeNet, totalPositive: totalPos, totalNegative: totalNeg, shadowingPositive, shadowingNegative, basicPositive, basicNegative, learningPositive, learningNegative, teacherNotes: notes, teacherRequests: requests, scheduledDays, weekRows: weekRows4Print }} />
       </div>
 
       {/* 화면 요약 카드 */}
