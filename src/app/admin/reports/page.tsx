@@ -486,7 +486,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
           { label: '출석', value: `${presentDays}/${scheduledCount}일`, sub: scheduledCount > 0 ? `${Math.round(presentDays / scheduledCount * 100)}%` : '–' },
           { label: '숙제 완료', value: `${hwDone}/${hwRecs.length}건`, sub: hwRecs.length > 0 ? `${Math.round(hwDone / hwRecs.length * 100)}%` : '–' },
           { label: '시험 평균', value: avgPct !== null ? `${avgPct}%` : '–', sub: avgPct !== null ? scoreGrade(avgPct) + '등급' : '응시 없음' },
-          { label: '태도 점수', value: attitudeNet >= 0 ? `+${attitudeNet}` : String(attitudeNet), sub: `+${totalPositive} / ${totalNegative}` },
+          { label: '태도 점수', value: attitudeNet >= 0 ? `+${attitudeNet}` : String(attitudeNet), sub: `기본: +${basicPositive}${basicNegative ? '/' + basicNegative : ''} | 학습: +${learningPositive}${learningNegative ? '/' + learningNegative : ''}` },
         ].map(item => (
           <div key={item.label} style={{ background: 'white', borderRadius: 12, padding: '14px 16px', border: '1px solid #e2e8f0', borderTop: '3px solid #0f2a52' }}>
             <div style={{ fontSize: 11, color: '#64748b', fontWeight: 700, marginBottom: 6 }}>{item.label}</div>
