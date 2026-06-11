@@ -86,7 +86,7 @@ export default function AttitudePage() {
         return rDate >= monthStart && rDate <= monthEnd;
       });
     }
-    return records.reduce((sum, r) => sum + Math.max(0, r.learningAttitude) + Math.max(0, r.basicAttitude), 0);
+    return records.reduce((sum, r) => sum + Math.max(0, r.shadowing) + Math.max(0, r.learningAttitude) + Math.max(0, r.basicAttitude), 0);
   };
 
   const getNegative = (studentId: string, w?: string, month?: string) => {
@@ -101,7 +101,7 @@ export default function AttitudePage() {
         return rDate >= monthStart && rDate <= monthEnd;
       });
     }
-    return records.reduce((sum, r) => sum + Math.min(0, r.learningAttitude) + Math.min(0, r.basicAttitude), 0);
+    return records.reduce((sum, r) => sum + Math.min(0, r.shadowing) + Math.min(0, r.learningAttitude) + Math.min(0, r.basicAttitude), 0);
   };
 
   useEffect(() => {
