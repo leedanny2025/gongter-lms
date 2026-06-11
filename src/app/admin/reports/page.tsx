@@ -146,7 +146,7 @@ function PrintReport({ student, periodLabel, isMonthly, dateRange, sections, rep
             { label: '출석률', value: sections.attendance ? `${attRate}%` : '–', sub: sections.attendance ? `${attPresent}/${attTotal}일` : '' },
             { label: '숙제 완료율', value: sections.homework ? `${hwRate}%` : '–', sub: sections.homework ? `${hwDone}/${hwTotal}건` : '' },
             { label: '시험 평균', value: sections.tests && avgPct !== null ? `${avgPct}%` : '–', sub: sections.tests && avgPct !== null ? scoreGrade(avgPct) + '등급' : '' },
-            { label: '태도 점수', value: sections.attitude ? (reportData.attitudeNet >= 0 ? `+${reportData.attitudeNet}` : String(reportData.attitudeNet)) : '–', sub: sections.attitude ? `기본: ${reportData.basicPositive || 0}${(reportData.basicNegative || 0) !== 0 ? '/' + (reportData.basicNegative || 0) : ''} | 학습: ${reportData.learningPositive || 0}${(reportData.learningNegative || 0) !== 0 ? '/' + (reportData.learningNegative || 0) : ''}` : '' },
+            { label: '태도 점수', value: sections.attitude ? (reportData.attitudeNet >= 0 ? `+${reportData.attitudeNet}` : String(reportData.attitudeNet)) : '–', sub: sections.attitude ? `기본: +${reportData.basicPositive ?? 0}${reportData.basicNegative ? '/' + reportData.basicNegative : ''} | 학습: +${reportData.learningPositive ?? 0}${reportData.learningNegative ? '/' + reportData.learningNegative : ''}` : '' },
           ].map((item, i) => (
             <div key={i} style={{ padding: '10px 12px', borderRight: i < 3 ? '1px solid #dde4ed' : 'none', textAlign: 'center' }}>
               <div style={{ fontSize: 8, color: '#6b7280', fontWeight: 700, marginBottom: 4 }}>{item.label}</div>

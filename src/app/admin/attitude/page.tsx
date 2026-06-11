@@ -67,22 +67,42 @@ export default function AttitudePage() {
   const [settingsForm, setSettingsForm] = useState<AttitudeDollarSettings>(state.attitudeDollarSettings);
   const [awarded, setAwarded] = useState<Record<string, boolean>>({});
   const [classFilter, setClassFilter] = useState('전체');
-  const [summaryScope, setSummaryScope] = useState<'week' | 'all'>('week');
+  const [summaryScope, setSummaryScope] = useState<'week' | 'month' | 'all'>('week');
 
   const week = getWeekKey();
   const { label: weekLabel } = getWeekDateRange(viewWeek);
   const classGroups = ['전체', ...new Set(state.students.map(s => s.classGroup))];
   const filteredStudents = classFilter === '전체' ? state.students : state.students.filter(s => s.classGroup === classFilter);
 
-  const getPositive = (studentId: string, w?: string) =>
-    (state.attitudeRecords || [])
-      .filter(r => r.studentId === studentId && (!w || r.week === w))
-      .reduce((sum, r) => sum + Math.max(0, r.shadowing) + Math.max(0, r.learningAttitude) + Math.max(0, r.basicAttitude), 0);
+  const getPositive = (studentId: string, w?: string, month?: string) => {
+    let records = (state.attitudeRecords || []).filter(r => r.studentId === studentId);
+    if (w) records = records.filter(r => r.week === w);
+    if (month) {
+      const monthDate = getWeekDateRange(month).start;
+      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+      records = records.filter(r => {
+        const rDate = getWeekDateRange(r.week).start;
+        return rDate >= monthStart && rDate <= monthEnd;
+      });
+    }
+    return records.reduce((sum, r) => sum + Math.max(0, r.learningAttitude) + Math.max(0, r.basicAttitude), 0);
+  };
 
-  const getNegative = (studentId: string, w?: string) =>
-    (state.attitudeRecords || [])
-      .filter(r => r.studentId === studentId && (!w || r.week === w))
-      .reduce((sum, r) => sum + Math.min(0, r.shadowing) + Math.min(0, r.learningAttitude) + Math.min(0, r.basicAttitude), 0);
+  const getNegative = (studentId: string, w?: string, month?: string) => {
+    let records = (state.attitudeRecords || []).filter(r => r.studentId === studentId);
+    if (w) records = records.filter(r => r.week === w);
+    if (month) {
+      const monthDate = getWeekDateRange(month).start;
+      const monthStart = new Date(monthDate.getFullYear(), monthDate.getMonth(), 1);
+      const monthEnd = new Date(monthDate.getFullYear(), monthDate.getMonth() + 1, 0);
+      records = records.filter(r => {
+        const rDate = getWeekDateRange(r.week).start;
+        return rDate >= monthStart && rDate <= monthEnd;
+      });
+    }
+    return records.reduce((sum, r) => sum + Math.min(0, r.learningAttitude) + Math.min(0, r.basicAttitude), 0);
+  };
 
   useEffect(() => {
     setSettingsForm(state.attitudeDollarSettings);
@@ -314,7 +334,7 @@ export default function AttitudePage() {
 
           {/* 주간 / 전체 토글 */}
           <div style={{ display: 'flex', gap: 6, marginBottom: 12 }}>
-            {([{ key: 'week', label: '주간 누적' }, { key: 'all', label: '전체 누적' }] as const).map(({ key, label }) => (
+            {([{ key: 'week', label: '주간 누적' }, { key: 'month', label: '월간 누적' }, { key: 'all', label: '전체 누적' }] as const).map(({ key, label }) => (
               <button key={key} onClick={() => setSummaryScope(key)} style={{
                 padding: '6px 14px', borderRadius: 20, border: '1px solid', minHeight: 'unset',
                 borderColor: summaryScope === key ? '#6366f1' : '#e2e8f0',
@@ -332,8 +352,9 @@ export default function AttitudePage() {
               const tier = getDollarTier(total);
               const isAwarded = awarded[student.id];
               const scopeWeek = summaryScope === 'week' ? viewWeek : undefined;
-              const pos = getPositive(student.id, scopeWeek);
-              const neg = getNegative(student.id, scopeWeek);
+              const scopeMonth = summaryScope === 'month' ? viewWeek : undefined;
+              const pos = getPositive(student.id, scopeWeek, scopeMonth);
+              const neg = getNegative(student.id, scopeWeek, scopeMonth);
               return (
                 <div key={student.id} style={{
                   display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px',
