@@ -443,8 +443,8 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
   const shadowingNegative = attitudeRecs.reduce((s, a) => s + (a.shadowing < 0 ? a.shadowing : 0), 0);
 
   // 합계
-  const totalPositive = basicPositive + learningPositive;
-  const totalNegative = basicNegative + learningNegative;
+  const totalPositive = shadowingPositive + basicPositive + learningPositive;
+  const totalNegative = shadowingNegative + basicNegative + learningNegative;
   const attitudeNet = totalPositive + totalNegative;
   const presentDays = attRecs.filter(r => r.status === 'present' || r.status === 'late').length;
   const scheduledCount = scheduledDays.filter(d => DAY_ORDER.includes(d as typeof DAY_ORDER[number])).length;
