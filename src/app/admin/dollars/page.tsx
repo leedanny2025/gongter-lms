@@ -185,6 +185,26 @@ export default function DollarsPage() {
     return awardedAmount - purchasedAmount;
   };
 
+  // 특정 주까지의 누적 보유액 계산
+  const getCumulativeDollars = (studentId: string, upToWeek: string) => {
+    // upToWeek까지의 모든 지급액
+    const awardedUpto = (state.awardRecords || [])
+      .filter(a => a.studentId === studentId && a.week <= upToWeek)
+      .reduce((sum, a) => sum + a.amount, 0);
+
+    // upToWeek까지의 모든 구매액
+    const purchasedUpto = (state.purchases || [])
+      .filter(p => {
+        if (p.studentId !== studentId) return false;
+        const pDate = new Date(p.purchasedAt);
+        const weekDate = getWeekDateRange(upToWeek).start;
+        return pDate <= weekDate;
+      })
+      .reduce((sum, p) => sum + p.cost, 0);
+
+    return awardedUpto - purchasedUpto;
+  };
+
   const toggleSelect = (id: string) => {
     setSelectedIds(prev => {
       const next = new Set(prev);
@@ -513,7 +533,7 @@ export default function DollarsPage() {
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                           <span style={{ fontWeight: 800, color: '#7c3aed', fontSize: 15 }}>
-                            ${student.dollars}
+                            ${getCumulativeDollars(student.id, week)}
                           </span>
                         </td>
                       </tr>
