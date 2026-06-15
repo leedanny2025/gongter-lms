@@ -469,7 +469,7 @@ export default function DollarsPage() {
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#16a34a', fontSize: 13 }}>이번 주</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#8b5cf6', fontSize: 13 }}>지난 주</th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#059669', fontSize: 13 }}>월별 누적</th>
-                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#0ea5e9', fontSize: 13, background: '#f0f9ff' }}>💰 지급 예정</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#0ea5e9', fontSize: 13, background: '#f0f9ff' }}>💰 지급 예정<br/><span style={{ fontSize: 11, fontWeight: 400, color: '#0284c7' }}>(금요일 자정)</span></th>
                     <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#7c3aed', fontSize: 13 }}>총 보유</th>
                   </tr>
                 </thead>
