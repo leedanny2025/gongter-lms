@@ -10,7 +10,7 @@
     },
     {
       "path": "/api/cron/weekly-award",
-      "schedule": "0 19 * * 5"
+      "schedule": "0 15 * * 4"
     }
   ]
 }
