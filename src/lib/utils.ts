@@ -28,8 +28,9 @@ export function getWeekDateRange(weekKey: string): { start: Date; end: Date; lab
   const dayOfWeek = startDay.getDay();
   const monday = new Date(startDay.getTime() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) * 86400000);
   const friday = new Date(monday.getTime() + 4 * 86400000);
+  const sunday = new Date(monday.getTime() + 6 * 86400000); // 월요일부터 일요일까지 포함
   const label = `${monday.getMonth() + 1}/${monday.getDate()} ~ ${friday.getMonth() + 1}/${friday.getDate()}`;
-  return { start: monday, end: friday, label };
+  return { start: monday, end: sunday, label };
 }
 
 export function getPrevWeek(weekKey: string): string {
