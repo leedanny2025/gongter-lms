@@ -187,26 +187,29 @@ export default function DollarsPage() {
 
   // 특정 주까지의 누적 보유액 계산
   const getCumulativeDollars = (studentId: string, upToWeek: string) => {
+    const student = state.students.find(s => s.id === studentId);
+    if (!student) return 0;
+
     // upToWeek까지의 모든 지급액
     const awardedUpto = (state.awardRecords || [])
-      .filter(a => a.studentId === studentId && a.week <= upToWeek)
-      .reduce((sum, a) => sum + a.amount, 0);
+      .filter(a => a.studentId === studentId && (a.week ?? '') <= upToWeek)
+      .reduce((sum, a) => sum + (a.amount ?? 0), 0);
 
-    // upToWeek까지의 모든 구매액 (주의 끝날짜까지 포함)
-    const weekEnd = getWeekDateRange(upToWeek).end;
+    // upToWeek까지의 모든 구매액
+    const weekDateRange = getWeekDateRange(upToWeek);
+    const weekEndDate = new Date(weekDateRange.end);
+    weekEndDate.setHours(23, 59, 59, 999);
+
     const purchasedUpto = (state.purchases || [])
       .filter(p => {
         if (p.studentId !== studentId) return false;
-        const pDate = new Date(p.purchasedAt);
-        // 시간 부분 제거하고 비교
-        pDate.setHours(0, 0, 0, 0);
-        const endDate = new Date(weekEnd);
-        endDate.setHours(23, 59, 59, 999);
-        return pDate <= endDate;
+        const purchaseDate = new Date(p.purchasedAt);
+        return purchaseDate <= weekEndDate;
       })
-      .reduce((sum, p) => sum + p.cost, 0);
+      .reduce((sum, p) => sum + (p.cost ?? 0), 0);
 
-    return awardedUpto - purchasedUpto;
+    const result = awardedUpto - purchasedUpto;
+    return Math.max(0, result); // 음수는 0으로 표시
   };
 
   const toggleSelect = (id: string) => {
