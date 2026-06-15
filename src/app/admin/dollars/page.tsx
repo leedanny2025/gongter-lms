@@ -190,26 +190,27 @@ export default function DollarsPage() {
     const student = state.students.find(s => s.id === studentId);
     if (!student) return 0;
 
-    // upToWeek까지의 모든 지급액
-    const awardedUpto = (state.awardRecords || [])
-      .filter(a => a.studentId === studentId && (a.week ?? '') <= upToWeek)
+    // upToWeek 이후의 지급액 (역계산용)
+    const awardedAfter = (state.awardRecords || [])
+      .filter(a => a.studentId === studentId && (a.week ?? '') > upToWeek)
       .reduce((sum, a) => sum + (a.amount ?? 0), 0);
 
-    // upToWeek까지의 모든 구매액
+    // upToWeek 이후의 구매액 (역계산용)
     const weekDateRange = getWeekDateRange(upToWeek);
     const weekEndDate = new Date(weekDateRange.end);
     weekEndDate.setHours(23, 59, 59, 999);
 
-    const purchasedUpto = (state.purchases || [])
+    const purchasedAfter = (state.purchases || [])
       .filter(p => {
         if (p.studentId !== studentId) return false;
         const purchaseDate = new Date(p.purchasedAt);
-        return purchaseDate <= weekEndDate;
+        return purchaseDate > weekEndDate;
       })
       .reduce((sum, p) => sum + (p.cost ?? 0), 0);
 
-    const result = awardedUpto - purchasedUpto;
-    return result; // 정확한 누적 금액 반환
+    // 현재 보유액 - (이후 지급 - 이후 구매) = upToWeek까지의 보유액
+    const result = (student.dollars ?? 0) - (awardedAfter - purchasedAfter);
+    return result;
   };
 
   const toggleSelect = (id: string) => {
