@@ -209,7 +209,7 @@ export default function DollarsPage() {
       .reduce((sum, p) => sum + (p.cost ?? 0), 0);
 
     const result = awardedUpto - purchasedUpto;
-    return Math.max(0, result); // 음수는 0으로 표시
+    return result; // 정확한 누적 금액 반환
   };
 
   const toggleSelect = (id: string) => {
