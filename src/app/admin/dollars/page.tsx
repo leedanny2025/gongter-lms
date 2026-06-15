@@ -192,13 +192,17 @@ export default function DollarsPage() {
       .filter(a => a.studentId === studentId && a.week <= upToWeek)
       .reduce((sum, a) => sum + a.amount, 0);
 
-    // upToWeek까지의 모든 구매액
+    // upToWeek까지의 모든 구매액 (주의 끝날짜까지 포함)
+    const weekEnd = getWeekDateRange(upToWeek).end;
     const purchasedUpto = (state.purchases || [])
       .filter(p => {
         if (p.studentId !== studentId) return false;
         const pDate = new Date(p.purchasedAt);
-        const weekDate = getWeekDateRange(upToWeek).start;
-        return pDate <= weekDate;
+        // 시간 부분 제거하고 비교
+        pDate.setHours(0, 0, 0, 0);
+        const endDate = new Date(weekEnd);
+        endDate.setHours(23, 59, 59, 999);
+        return pDate <= endDate;
       })
       .reduce((sum, p) => sum + p.cost, 0);
 
