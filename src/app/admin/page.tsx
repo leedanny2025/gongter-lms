@@ -379,6 +379,26 @@ export default function AdminDashboard() {
   const pendingTests = weekTests.filter(t => t.status === 'pending').length;
   const totalDollars = state.students.reduce((s, x) => s + x.dollars, 0);
 
+  // 완료 예정 숙제들 (오늘/내일)
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const tomorrow = new Date(today);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const todayStr2 = localDateStr(today);
+  const tomorrowStr = localDateStr(tomorrow);
+
+  const pendingDueHomeworks = state.dayHomeworks.filter(hw => {
+    if (!hw.expectedSubmitDate) return false;
+    if (hw.status !== 'agreed') return false;
+    const dueDate = new Date(hw.expectedSubmitDate);
+    dueDate.setHours(0, 0, 0, 0);
+    return dueDate.getTime() === today.getTime() || dueDate.getTime() === tomorrow.getTime();
+  }).sort((a, b) => {
+    const aDate = new Date(a.expectedSubmitDate!).getTime();
+    const bDate = new Date(b.expectedSubmitDate!).getTime();
+    return aDate - bDate;
+  });
+
   // 달러 계산
   const enabledConditions = state.dollarConditions.filter(c => c.enabled);
   const basicConditions = enabledConditions.filter(c => ['attendance', 'homework', 'test'].includes(c.type));
@@ -763,6 +783,59 @@ export default function AdminDashboard() {
             ))}
           </div>
         </div>
+
+        {/* ── 💫 완료 예정 숙제 모니터링 ── */}
+        {pendingDueHomeworks.length > 0 && (
+          <div className="card" style={{ gridColumn: '1 / -1' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
+              <h3 style={{ margin: 0, fontSize: 15, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+                <span style={{ fontSize: 18 }}>💫</span> 완료 예정 숙제 모니터링
+              </h3>
+              <a href="/admin/homework" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>전체 →</a>
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {pendingDueHomeworks.map(hw => {
+                const student = state.students.find(s => s.id === hw.studentId);
+                const dueDate = new Date(hw.expectedSubmitDate!);
+                const isToday = dueDate.toISOString().slice(0, 10) === todayStr2;
+                const dueDateLabel = isToday ? '오늘' : '내일';
+                const dueTimeLabel = `${dueDate.getMonth() + 1}/${dueDate.getDate()}`;
+
+                return (
+                  <div key={hw.id} style={{
+                    display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', borderRadius: 12,
+                    background: isToday ? '#fef3c7' : '#f0fdf4',
+                    border: `1.5px solid ${isToday ? '#fcd34d' : '#bbf7d0'}`,
+                    cursor: 'pointer', transition: 'all 0.15s'
+                  }} onClick={() => setHwPopup({ hw, studentId: hw.studentId, studentName: hw.studentName || student?.name || '', day: hw.day, week: hw.week })}>
+                    <div style={{ flexShrink: 0 }}>
+                      <span style={{ fontSize: 20 }}>{isToday ? '🎯' : '📅'}</span>
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b' }}>{hw.studentName || student?.name}</span>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isToday ? '#92400e' : '#15803d', background: isToday ? '#fef3c7' : '#d1fae5', padding: '2px 8px', borderRadius: 999 }}>
+                          {dueDateLabel} ({dueTimeLabel})
+                        </span>
+                      </div>
+                      <div style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>
+                        {[
+                          hw.computer ? `💻 ${hw.computer.split('\n')[0]}` : '',
+                          hw.textbook ? `📚 ${hw.textbook.split('\n')[0]}` : '',
+                          hw.vocabulary ? `📝 ${hw.vocabulary.split('\n')[0]}` : '',
+                          hw.other ? `✏️ ${hw.other.split('\n')[0]}` : '',
+                        ].filter(Boolean).join(' · ')}
+                      </div>
+                    </div>
+                    <div style={{ flexShrink: 0, textAlign: 'right' }}>
+                      <span style={{ fontSize: 14, fontWeight: 700, color: '#6366f1' }}>📋</span>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
 
         {/* ── 달러 현황 ── */}
         <div className="card" style={{ gridColumn: '1 / -1' }}>
