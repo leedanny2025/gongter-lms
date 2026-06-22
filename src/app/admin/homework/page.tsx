@@ -129,6 +129,17 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
   const m = STATUS_META[hw.status];
   const hasContent = hw.computer || hw.textbook || hw.vocabulary || hw.other;
 
+  const isExpectedDateToday = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const expected = new Date(dateStr);
+    expected.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expected.getTime() === today.getTime();
+  };
+
+  const canProcessCompletion = hw.status === 'agreed' && hw.expectedSubmitDate && isExpectedDateToday(hw.expectedSubmitDate);
+
   const STAGE_INFO: Record<string, { step: number; title: string; desc: string; icon: string }> = {
     pending:   { step: 1, title: '합의 대기 중',  desc: '교사와 숙제 범위를 합의하는 단계입니다', icon: '🤝' },
     agreed:    { step: 2, title: '숙제 진행 중',  desc: '합의된 숙제를 학생이 진행하는 단계입니다', icon: '✏️' },
@@ -188,13 +199,24 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
           )}
         </div>
         {hw.expectedSubmitDate && (
-          <div style={{ background: '#f0fdf4', borderRadius: 10, padding: '10px 14px', marginBottom: 16, border: '1px solid #bbf7d0' }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: '#15803d' }}>
-              📅 완료 예정일: {new Date(hw.expectedSubmitDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })}
+          <div style={{ background: isExpectedDateToday(hw.expectedSubmitDate) ? '#f0fdf4' : '#fef3c7', borderRadius: 10, padding: '10px 14px', marginBottom: 16, border: `1px solid ${isExpectedDateToday(hw.expectedSubmitDate) ? '#bbf7d0' : '#fcd34d'}` }}>
+            <div style={{ fontSize: 12, fontWeight: 700, color: isExpectedDateToday(hw.expectedSubmitDate) ? '#15803d' : '#92400e' }}>
+              📅 완료 예정일: {new Date(hw.expectedSubmitDate).toLocaleDateString('ko-KR', { month: 'long', day: 'numeric' })} {isExpectedDateToday(hw.expectedSubmitDate) ? '(오늘)' : ''}
             </div>
           </div>
         )}
         <div style={{ borderTop: '1px solid #f1f5f9', marginBottom: 16 }} />
+        {hw.status === 'agreed' && !canProcessCompletion && (
+          <div style={{ marginBottom: 12, padding: '10px 14px', borderRadius: 10, background: '#fef3c7', border: '1px solid #fcd34d', display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+            <span style={{ fontSize: 16, flexShrink: 0, marginTop: 2 }}>⏳</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: '#92400e', marginBottom: 4 }}>완료 처리 안내</div>
+              <div style={{ fontSize: 11, color: '#92400e', lineHeight: 1.5 }}>
+                {!hw.expectedSubmitDate ? '완료 예정일이 설정되지 않았습니다. 예정일을 지정한 후 그 날짜에 완료 처리할 수 있습니다.' : '오늘이 완료 예정일이 아닙니다. 예정일이 도래하면 완료 처리할 수 있습니다.'}
+              </div>
+            </div>
+          </div>
+        )}
         <div style={{ fontSize: 12, fontWeight: 700, color: '#94a3b8', marginBottom: 10 }}>교사 처리</div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <button onClick={onEdit} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 16px', borderRadius: 9, border: '1px solid #e2e8f0', background: 'white', color: '#374151', cursor: 'pointer', fontSize: 13, fontWeight: 600, minHeight: 'unset' }}>
@@ -209,7 +231,7 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
             </button>
           </>)}
           {hw.status === 'agreed' && (<>
-            <button onClick={() => { onAction('CONFIRM_HOMEWORK', { id: hw.id, result: 'confirmed' }); onClose(); }} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 16px', borderRadius: 9, border: 'none', background: '#22c55e', color: 'white', cursor: 'pointer', fontSize: 14, fontWeight: 800, minHeight: 'unset' }}>
+            <button onClick={() => { onAction('CONFIRM_HOMEWORK', { id: hw.id, result: 'confirmed' }); onClose(); }} disabled={!canProcessCompletion} style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '10px 16px', borderRadius: 9, border: 'none', background: canProcessCompletion ? '#22c55e' : '#cbd5e1', color: 'white', cursor: canProcessCompletion ? 'pointer' : 'default', fontSize: 14, fontWeight: 800, minHeight: 'unset' }}>
               <CheckCircle size={15} /> 완료 처리
             </button>
             <button onClick={() => { onAction('REJECT_HOMEWORK', hw.id); onClose(); }} style={{ display: 'flex', alignItems: 'center', gap: 5, padding: '10px 16px', borderRadius: 9, border: 'none', background: '#fff7ed', color: '#c2410c', cursor: 'pointer', fontSize: 13, fontWeight: 700, minHeight: 'unset' }}>

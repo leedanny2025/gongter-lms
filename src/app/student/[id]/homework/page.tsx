@@ -1,10 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
 import { DayHomework, HomeworkDay, HomeworkStatus } from '@/lib/types';
-import { getWeekKey } from '@/lib/utils';
+import { getWeekKey, getWeekDateRange, getDayFromDate } from '@/lib/utils';
 import { Plus, CheckCircle, X, Pencil, Check } from 'lucide-react';
 import WeekSelector from '@/components/WeekSelector';
 
@@ -26,29 +26,46 @@ function DatePicker({ value, onChange, bg = '#f5f3ff', border = '#a5b4fc', label
     options.push(d);
   }
   const toVal = (d: Date) => d.toISOString().slice(0, 10);
+  const maxDate = new Date(today);
+  maxDate.setDate(maxDate.getDate() + 90);
+  const minVal = toVal(today);
+  const maxVal = toVal(maxDate);
   return (
     <div style={{ background: bg, borderRadius: 12, padding: '12px 14px', border: `1px solid ${border}` }}>
       <div style={{ fontSize: 12, fontWeight: 700, color: '#374151', marginBottom: 10 }}>📅 {label}</div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-        {options.map((d, i) => {
-          const val = toVal(d);
-          const selected = value === val;
-          const label2 = i === 0 ? '오늘' : i === 1 ? '내일' : `${d.getMonth()+1}/${d.getDate()}`;
-          const dayName = KO_DAY[d.getDay()];
-          return (
-            <button key={val} onClick={() => onChange(selected ? '' : val)} style={{
-              padding: '5px 10px', borderRadius: 8, border: '1.5px solid',
-              borderColor: selected ? '#6366f1' : '#e2e8f0',
-              background: selected ? '#eff0ff' : 'white',
-              color: selected ? '#6366f1' : '#374151',
-              fontWeight: selected ? 800 : 400, fontSize: 12,
-              cursor: 'pointer', minHeight: 'unset', lineHeight: 1.4,
-            }}>
-              <div>{label2}</div>
-              <div style={{ fontSize: 10, opacity: 0.7 }}>{dayName}요일</div>
-            </button>
-          );
-        })}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <input
+          type="date"
+          value={value}
+          min={minVal}
+          max={maxVal}
+          onChange={e => onChange(e.target.value)}
+          style={{
+            width: '100%', padding: '10px 12px', borderRadius: 10, border: `1.5px solid ${value ? '#6366f1' : '#e2e8f0'}`,
+            background: 'white', color: '#111827', fontSize: 13, outline: 'none', cursor: 'pointer',
+          }}
+        />
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {options.map((d, i) => {
+            const val = toVal(d);
+            const selected = value === val;
+            const label2 = i === 0 ? '오늘' : i === 1 ? '내일' : `${d.getMonth()+1}/${d.getDate()}`;
+            const dayName = KO_DAY[d.getDay()];
+            return (
+              <button key={val} onClick={() => onChange(selected ? '' : val)} style={{
+                padding: '5px 10px', borderRadius: 8, border: '1.5px solid',
+                borderColor: selected ? '#6366f1' : '#e2e8f0',
+                background: selected ? '#eff0ff' : 'white',
+                color: selected ? '#6366f1' : '#374151',
+                fontWeight: selected ? 800 : 400, fontSize: 12,
+                cursor: 'pointer', minHeight: 'unset', lineHeight: 1.4,
+              }}>
+                <div>{label2}</div>
+                <div style={{ fontSize: 10, opacity: 0.7 }}>{dayName}요일</div>
+              </button>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -318,13 +335,16 @@ export default function StudentHomeworkPage() {
     setUncheckedUids(new Set());
     setRangeSub('');
     setRangeText('');
-    setExpectedDate('');
     const rec = state.dayHomeworks.find(h => h.studentId === id && h.week === week && h.day === day);
+    setExpectedDate(rec?.expectedSubmitDate || '');
     setRangeItems(rec && (rec.status === 'pending' || rec.status === 'rejected') ? hwToItems(rec) : []);
   };
 
   const startEditing = () => {
-    if (existing) setRangeItems(hwToItems(existing));
+    if (existing) {
+      setRangeItems(hwToItems(existing));
+      setExpectedDate(existing.expectedSubmitDate || '');
+    }
     setIsEditing(true);
   };
 
@@ -374,7 +394,40 @@ export default function StudentHomeworkPage() {
     setUncheckedUids(new Set());
   };
 
+  const formatDateLabel = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return `${d.getMonth() + 1}/${d.getDate()}`;
+  };
+
+  const formatExpectedLabel = (dateStr?: string) => {
+    if (!dateStr) return '';
+    const d = new Date(dateStr);
+    return `- 완료 예정일 - ${d.getMonth() + 1}/${d.getDate()} (${KO_DAY[d.getDay()]}요일)`;
+  };
+
+  const isExpectedDateToday = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const expected = new Date(dateStr);
+    expected.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expected.getTime() === today.getTime();
+  };
+
+  const isExpectedDatePast = (dateStr?: string) => {
+    if (!dateStr) return false;
+    const expected = new Date(dateStr);
+    expected.setHours(0, 0, 0, 0);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    return expected.getTime() < today.getTime();
+  };
+
   const dayLabel = DAYS.find(d => d.key === activeDay)?.label;
+  const selectedExpectedDate = expectedDate || existing?.expectedSubmitDate;
+  const canSubmitDone = existing?.status === 'agreed' && selectedExpectedDate && (isExpectedDateToday(selectedExpectedDate) || isExpectedDatePast(selectedExpectedDate));
+  const pendingExpectedHomeworks = weekHomeworks.filter(w => w.record?.expectedSubmitDate && !['confirmed', 'approved'].includes(w.record.status));
   const rangeBadge = !existing ? null
     : existing.status === 'pending'  ? { text: '⏳ 확인 대기', bg: '#fef3c7', color: '#92400e' }
     : existing.status === 'rejected' ? { text: '❌ 반려됨',    bg: '#fee2e2', color: '#991b1b' }
@@ -418,6 +471,9 @@ export default function StudentHomeworkPage() {
                 <div style={{ fontSize: 18, lineHeight: 1.2 }}>{record ? STATUS_EMOJI[record.status] : '✏️'}</div>
                 <div style={{ fontSize: 13, fontWeight: 900, color: isActive ? '#6366f1' : '#1e293b', marginTop: 3 }}>{label}</div>
                 <div style={{ fontSize: 9, fontWeight: 700, color: labelColor, marginTop: 2 }}>{tabLabel}</div>
+                {record?.expectedSubmitDate && (
+                  <div style={{ fontSize: 8, color: '#64748b', marginTop: 2 }}>{formatExpectedLabel(record.expectedSubmitDate)}</div>
+                )}
               </button>
             );
           })}
@@ -455,6 +511,35 @@ export default function StudentHomeworkPage() {
           ))}
         </div>
       </div>
+
+      {pendingExpectedHomeworks.length > 0 && (
+        <div style={{ background: 'white', borderRadius: 20, padding: 16, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+            <div style={{ width: 32, height: 32, borderRadius: 12, background: '#ecfdf5', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 18 }}>🎯</div>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 800, color: '#0f766e' }}>완료 예정 숙제</div>
+              <div style={{ fontSize: 11, color: '#475569', marginTop: 2 }}>완료 예정일이 등록된 숙제입니다.</div>
+            </div>
+          </div>
+          <div style={{ display: 'grid', gap: 10 }}>
+            {pendingExpectedHomeworks.map(({ day, label, record }) => {
+              const expectedDay = getDayFromDate(record!.expectedSubmitDate!);
+              const dueToday = expectedDay === activeDay;
+              return (
+                <div key={day} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '12px 14px', borderRadius: 16, background: dueToday ? '#ecfdf5' : '#f8fafc', border: `1px solid ${dueToday ? '#6ee7b7' : '#e2e8f0'}` }}>
+                  <div>
+                    <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a' }}>{label}요일 · {record?.status === 'agreed' ? '확정 범위' : '진행 중'}</div>
+                    <div style={{ fontSize: 12, color: '#475569', marginTop: 4 }}>{formatExpectedLabel(record!.expectedSubmitDate)}</div>
+                  </div>
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, background: dueToday ? '#22c55e' : '#e2e8f0', color: dueToday ? 'white' : '#475569', fontSize: 11, fontWeight: 700, border: dueToday ? 'none' : '1px solid #cbd5e1' }}>
+                    {dueToday ? '✅ 오늘 예정' : '⏳ 예정'}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
 
       {/* ── 토스트 ── */}
       {justSubmitted && (
@@ -539,8 +624,21 @@ export default function StudentHomeworkPage() {
                   ? `${dayLabel}요일 · 제출 완료`
                   : '범위 항목을 입력하면 여기에 표시돼요'}
               </div>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 10 }}>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, background: '#e0e7ff', color: '#1d4ed8', fontSize: 12, fontWeight: 700 }}>
+                  📝 숙제 등록
+                </span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '6px 10px', borderRadius: 999, background: selectedExpectedDate ? '#dcfce7' : '#f8fafc', color: selectedExpectedDate ? '#15803d' : '#475569', fontSize: 12, fontWeight: 700, border: selectedExpectedDate ? '1px solid #86efac' : '1px solid #e2e8f0' }}>
+                  {selectedExpectedDate ? '📅 완료 예정 등록' : '📅 완료 예정 미등록'}
+                </span>
+              </div>
             </div>
           </div>
+          {selectedExpectedDate && (
+            <div style={{ marginRight: 12, fontSize: 12, fontWeight: 700, color: '#475569' }}>
+              {formatExpectedLabel(selectedExpectedDate)}
+            </div>
+          )}
           {existing?.status === 'submitted' && (
             <span style={{ padding: '4px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700, background: '#dbeafe', color: '#1e40af' }}>🔄 확인 중</span>
           )}
@@ -595,17 +693,33 @@ export default function StudentHomeworkPage() {
             </div>
             {(() => {
               const checkedCount = displayItems.filter(i => !uncheckedUids.has(i.uid)).length;
+              const canSubmit = canSubmitDone && checkedCount > 0;
+              const isDateMissing = !selectedExpectedDate;
+              const isDateFuture = selectedExpectedDate && !isExpectedDateToday(selectedExpectedDate) && !isExpectedDatePast(selectedExpectedDate);
+
               return (
-                <button onClick={submitDone} disabled={checkedCount === 0} style={{
-                  width: '100%', marginTop: 10, padding: '13px', borderRadius: 12, border: 'none',
-                  background: checkedCount > 0 ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#e2e8f0',
-                  color: checkedCount > 0 ? 'white' : '#94a3b8',
-                  fontWeight: 800, fontSize: 15, cursor: checkedCount > 0 ? 'pointer' : 'default',
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 'unset', ...TOUCH,
-                }}>
-                  <CheckCircle size={18} />
-                  숙제 완료 제출 {checkedCount > 0 ? `(${checkedCount}개)` : ''}
-                </button>
+                <>
+                  <button onClick={submitDone} disabled={!canSubmit} style={{
+                    width: '100%', marginTop: 10, padding: '13px', borderRadius: 12, border: 'none',
+                    background: canSubmit ? 'linear-gradient(135deg, #22c55e, #16a34a)' : '#e2e8f0',
+                    color: canSubmit ? 'white' : '#94a3b8',
+                    fontWeight: 800, fontSize: 15, cursor: canSubmit ? 'pointer' : 'default',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, minHeight: 'unset', ...TOUCH,
+                  }}>
+                    <CheckCircle size={18} />
+                    숙제 완료 제출 {checkedCount > 0 ? `(${checkedCount}개)` : ''}
+                  </button>
+                  {isDateMissing && (
+                    <div style={{ marginTop: 8, padding: '10px 14px', borderRadius: 10, background: '#fef3c7', fontSize: 12, fontWeight: 600, color: '#92400e', textAlign: 'center' }}>
+                      📅 완료 예정일을 먼저 설정해주세요
+                    </div>
+                  )}
+                  {isDateFuture && (
+                    <div style={{ marginTop: 8, padding: '10px 14px', borderRadius: 10, background: '#fef3c7', fontSize: 12, fontWeight: 600, color: '#92400e', textAlign: 'center' }}>
+                      ⏳ 예정일에만 제출할 수 있습니다
+                    </div>
+                  )}
+                </>
               );
             })()}
           </>
