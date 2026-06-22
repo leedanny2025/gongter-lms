@@ -7,6 +7,7 @@ import { TestRecord } from '@/lib/types';
 import { Student } from '@/lib/types';
 import { Plus, CheckCircle, ImageIcon, X, Upload, Pencil, Trash2 } from 'lucide-react';
 import { localDateStr, getWeekKey, getWeekDateRange } from '@/lib/utils';
+import WeekSelector from '@/components/WeekSelector';
 
 function AddTestModal({ onSave, onClose }: { onSave: (t: TestRecord) => void; onClose: () => void }) {
   const { state } = useStore();
@@ -380,6 +381,7 @@ export default function TestsPage() {
   useEffect(() => {
     if (state.students.length === 0) loadCol('students');
   }, []);
+  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
   const [confirmRecord, setConfirmRecord] = useState<TestRecord | null>(null);
   const [editRecord, setEditRecord] = useState<TestRecord | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
@@ -388,8 +390,9 @@ export default function TestsPage() {
   const [classFilter, setClassFilter] = useState('전체');
 
   const currentWeek = getWeekKey();
-  const { start: weekStart } = getWeekDateRange(currentWeek);
-  const currentWeekDates = Array.from({ length: 5 }, (_, i) => {
+  const viewWeek = summaryView === 'week' ? selectedWeek : currentWeek;
+  const { start: weekStart } = getWeekDateRange(viewWeek);
+  const viewWeekDates = Array.from({ length: 5 }, (_, i) => {
     const d = new Date(weekStart);
     d.setDate(weekStart.getDate() + i);
     return localDateStr(d);
@@ -397,7 +400,7 @@ export default function TestsPage() {
   const classGroups = ['전체', ...new Set(state.students.map(s => s.classGroup))];
 
   const weekRecords = state.testRecords.filter(t =>
-    (t.week === currentWeek || currentWeekDates.includes(t.date)) &&
+    (t.week === viewWeek || viewWeekDates.includes(t.date)) &&
     (classFilter === '전체' || state.students.find(s => s.id === t.studentId)?.classGroup === classFilter));
   const records = weekRecords.filter(t => filter === 'all' || t.status === filter);
   const filteredStudents = classFilter === '전체' ? state.students : state.students.filter(s => s.classGroup === classFilter);
@@ -441,6 +444,21 @@ export default function TestsPage() {
         <button className="btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 6 }} onClick={() => setShowAdd(true)}>
           <Plus size={16} /> 점수 입력
         </button>
+      </div>
+
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16, flexWrap: 'wrap' }}>
+        <WeekSelector week={selectedWeek} onChange={setSelectedWeek} />
+        <div style={{ display: 'flex', gap: 6 }}>
+          {(['week', 'all'] as const).map(v => (
+            <button key={v} onClick={() => setSummaryView(v)} style={{
+              padding: '6px 12px', borderRadius: 8, border: '1px solid',
+              borderColor: summaryView === v ? '#3b82f6' : '#e2e8f0',
+              background: summaryView === v ? '#eff6ff' : 'white',
+              color: summaryView === v ? '#3b82f6' : '#64748b',
+              fontWeight: summaryView === v ? 700 : 400, fontSize: 12, cursor: 'pointer', minHeight: 'unset',
+            }}>{v === 'week' ? '주간' : '전체'}</button>
+          ))}
+        </div>
       </div>
 
       {classGroups.length > 2 && (
@@ -559,7 +577,7 @@ export default function TestsPage() {
           {filteredStudents.map(student => {
             const allConfirmed = state.testRecords.filter(t => t.studentId === student.id && t.status === 'confirmed' && t.score !== null);
             const confirmed = summaryView === 'week'
-              ? allConfirmed.filter(t => t.week === currentWeek || currentWeekDates.includes(t.date))
+              ? allConfirmed.filter(t => t.week === viewWeek || viewWeekDates.includes(t.date))
               : allConfirmed;
             const avg = confirmed.length > 0
               ? Math.round(confirmed.reduce((s, t) => s + ((t.score! / t.maxScore) * 100), 0) / confirmed.length)
