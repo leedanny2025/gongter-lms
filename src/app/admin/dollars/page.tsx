@@ -2,13 +2,13 @@
 
 import { useState } from 'react';
 import { useStore } from '@/lib/store';
-import { DollarSign, Award, CheckCircle, XCircle, Star, X, ShoppingCart, Plus, Trash2, Package } from 'lucide-react';
+import { DollarSign, Award, CheckCircle, XCircle, Star, X, ShoppingCart, Plus, Trash2, Package, TrendingUp } from 'lucide-react';
 import WeekSelector from '@/components/WeekSelector';
 import { ShopItem } from '@/lib/types';
 import { getWeekDateRange, localDateStr, getPrevWeek } from '@/lib/utils';
 
 type AwardEntry = { name: string; amount: number };
-type Tab = 'award' | 'shop';
+type Tab = 'award' | 'shop' | 'monthly';
 type ViewMode = 'card' | 'table';
 
 export default function DollarsPage() {
@@ -22,6 +22,7 @@ export default function DollarsPage() {
   const [manualAmount, setManualAmount] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [awardSummary, setAwardSummary] = useState<AwardEntry[] | null>(null);
+  const [awardDetailModal, setAwardDetailModal] = useState<{ studentId: string; studentName: string } | null>(null);
 
   // 구매 탭 state
   const [newItemName, setNewItemName] = useState('');
@@ -93,6 +94,56 @@ export default function DollarsPage() {
       total += conditionMet(studentId, c.type) ? c.amount : 0;
     });
     return total;
+  };
+
+  const getAwardBreakdown = (studentId: string): AwardEntry[] => {
+    const breakdown: AwardEntry[] = [];
+    const { attendanceCount, homeworkCount, testCount, total: maxDays } = getAchievementCounts(studentId);
+
+    basicConditions.forEach(c => {
+      let rate = 0;
+      if (c.type === 'attendance') rate = attendanceCount / maxDays;
+      else if (c.type === 'homework') rate = homeworkCount / maxDays;
+      else if (c.type === 'test') rate = testCount / maxDays;
+      const earnedAmount = Math.round(c.amount * rate);
+      if (earnedAmount > 0) {
+        breakdown.push({ name: c.name, amount: earnedAmount });
+      }
+    });
+
+    bonusConditions.forEach(c => {
+      if (conditionMet(studentId, c.type)) {
+        breakdown.push({ name: c.name, amount: c.amount });
+      }
+    });
+
+    return breakdown;
+  };
+
+  const getMonthlyData = () => {
+    const now = new Date();
+    const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    return state.students.map(student => {
+      const monthlyAwarded = (state.awardRecords || [])
+        .filter(a => a.studentId === student.id && a.awardedAt.startsWith(currentMonth))
+        .reduce((s, a) => s + a.amount, 0);
+
+      const monthlyPurchased = (state.purchases || [])
+        .filter(p => p.studentId === student.id && p.purchasedAt.startsWith(currentMonth))
+        .reduce((s, p) => s + p.cost, 0);
+
+      return {
+        id: student.id,
+        name: student.name,
+        grade: student.grade,
+        classGroup: student.classGroup,
+        awarded: monthlyAwarded,
+        purchased: monthlyPurchased,
+        net: monthlyAwarded - monthlyPurchased,
+        total: student.dollars,
+      };
+    });
   };
 
   const getStudentScheduledDays = (studentId: string) => {
@@ -363,6 +414,12 @@ export default function DollarsPage() {
           >
             <ShoppingCart size={15} /> 달러 구매
           </button>
+          <button
+            onClick={() => setTab('monthly')}
+            style={{ padding: '8px 18px', borderRadius: 8, border: 'none', background: tab === 'monthly' ? 'white' : 'transparent', color: tab === 'monthly' ? '#059669' : '#64748b', fontWeight: 700, fontSize: 14, cursor: 'pointer', boxShadow: tab === 'monthly' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none', display: 'flex', alignItems: 'center', gap: 6 }}
+          >
+            <TrendingUp size={15} /> 월간 현황
+          </button>
         </div>
       </div>
 
@@ -538,7 +595,9 @@ export default function DollarsPage() {
                           {(() => {
                             const pendingAmount = calcDollars(student.id);
                             return (
-                              <span style={{ color: pendingAmount > 0 ? '#0ea5e9' : '#94a3b8', fontSize: 15 }}>
+                              <span
+                                onClick={() => setAwardDetailModal({ studentId: student.id, studentName: student.name })}
+                                style={{ color: pendingAmount > 0 ? '#0ea5e9' : '#94a3b8', fontSize: 15, cursor: 'pointer', textDecoration: 'underline' }}>
                                 ${pendingAmount}
                               </span>
                             );
@@ -999,6 +1058,106 @@ export default function DollarsPage() {
                 )}
               </>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* ── 월간 현황 탭 ── */}
+      {tab === 'monthly' && (
+        <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 14 }}>📊 월간 달러 현황</div>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', display: 'block' }}>
+            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: '100%' }}>
+              <thead>
+                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                  <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', minWidth: 100 }}>학생</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#059669', minWidth: 100 }}>월간 지급</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#dc2626', minWidth: 100 }}>월간 구매</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#0284c7', minWidth: 100 }}>순 지급액</th>
+                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#7c3aed', minWidth: 100 }}>총 보유</th>
+                </tr>
+              </thead>
+              <tbody>
+                {getMonthlyData().map((data, idx) => (
+                  <tr key={data.id} style={{ borderBottom: idx < state.students.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                    <td style={{ padding: '12px 14px' }}>
+                      <div style={{ fontWeight: 700, color: '#1e293b' }}>{data.name}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{data.grade} · {data.classGroup}</div>
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                      <span style={{ fontWeight: 800, color: data.awarded > 0 ? '#059669' : '#94a3b8', fontSize: 14 }}>
+                        +${data.awarded}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                      <span style={{ fontWeight: 800, color: data.purchased > 0 ? '#dc2626' : '#94a3b8', fontSize: 14 }}>
+                        -${data.purchased}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', background: data.net !== 0 ? (data.net > 0 ? '#f0fdf4' : '#fef2f2') : 'white' }}>
+                      <span style={{ fontWeight: 800, color: data.net > 0 ? '#16a34a' : data.net < 0 ? '#dc2626' : '#94a3b8', fontSize: 14 }}>
+                        {data.net > 0 ? '+' : ''}{data.net > 0 || data.net < 0 ? `$${data.net}` : '–'}
+                      </span>
+                    </td>
+                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800 }}>
+                      <span style={{ color: '#7c3aed', fontSize: 15 }}>
+                        ${data.total}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+                {state.students.length === 0 && (
+                  <tr>
+                    <td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>등록된 학생이 없습니다</td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 지급 예정액 상세 모달 */}
+      {awardDetailModal && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }} onClick={() => setAwardDetailModal(null)}>
+          <div style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 380, boxShadow: '0 20px 60px rgba(0,0,0,0.3)' }} onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
+              <div>
+                <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>지급 예정액 상세</h3>
+                <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{awardDetailModal.studentName} · {week}</div>
+              </div>
+              <button onClick={() => setAwardDetailModal(null)} style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 24, color: '#94a3b8' }}>×</button>
+            </div>
+
+            <div style={{ background: '#f8fafc', borderRadius: 12, padding: 14, marginBottom: 16 }}>
+              {(() => {
+                const breakdown = getAwardBreakdown(awardDetailModal.studentId);
+                const total = breakdown.reduce((s, a) => s + a.amount, 0);
+
+                return (
+                  <div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 12 }}>
+                      {breakdown.length === 0 ? (
+                        <div style={{ fontSize: 13, color: '#94a3b8', textAlign: 'center', padding: 10 }}>지급 대상 조건이 없습니다</div>
+                      ) : (
+                        breakdown.map((item, idx) => (
+                          <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 12px', background: 'white', borderRadius: 8, border: '1px solid #e2e8f0' }}>
+                            <span style={{ fontSize: 13, fontWeight: 600, color: '#374151' }}>{item.name}</span>
+                            <span style={{ fontSize: 14, fontWeight: 800, color: '#22c55e' }}>+${item.amount}</span>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                    <div style={{ padding: '12px 14px', borderRadius: 10, background: '#f0fdf4', border: '1.5px solid #bbf7d0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{ fontSize: 13, fontWeight: 700, color: '#15803d' }}>예상 지급액</span>
+                      <span style={{ fontSize: 18, fontWeight: 900, color: '#15803d' }}>+${total}</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+
+            <button onClick={() => setAwardDetailModal(null)} style={{ width: '100%', padding: '11px', borderRadius: 10, border: 'none', background: '#6366f1', color: 'white', cursor: 'pointer', fontWeight: 700, fontSize: 14 }}>닫기</button>
           </div>
         </div>
       )}
