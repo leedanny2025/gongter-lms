@@ -535,9 +535,14 @@ export default function DollarsPage() {
                           </span>
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right', background: '#f0f9ff', fontWeight: 800 }}>
-                          <span style={{ color: (student.weeklyPendingDollars ?? 0) > 0 ? '#0ea5e9' : '#94a3b8', fontSize: 15 }}>
-                            ${student.weeklyPendingDollars ?? 0}
-                          </span>
+                          {(() => {
+                            const pendingAmount = calcDollars(student.id);
+                            return (
+                              <span style={{ color: pendingAmount > 0 ? '#0ea5e9' : '#94a3b8', fontSize: 15 }}>
+                                ${pendingAmount}
+                              </span>
+                            );
+                          })()}
                         </td>
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                           <span style={{ fontWeight: 800, color: '#7c3aed', fontSize: 15 }}>
