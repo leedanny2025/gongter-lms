@@ -55,12 +55,14 @@ export default function DollarsPage() {
       .reduce((sum, r) => sum + r.shadowing + r.learningAttitude + r.basicAttitude, 0);
 
   const getWeekDates = () => {
-    const { start } = getWeekDateRange(week);
-    return Array.from({ length: 5 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return localDateStr(d);
-    });
+    const { start, end } = getWeekDateRange(week);
+    const dates: string[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      dates.push(localDateStr(current));
+      current.setDate(current.getDate() + 1);
+    }
+    return dates;
   };
 
   const getStatus = (studentId: string) => {
@@ -203,12 +205,13 @@ export default function DollarsPage() {
 
   const getPrevWeekDollars = (studentId: string) => {
     const prevWeek = getPrevWeek(week);
-    const { start } = getWeekDateRange(prevWeek);
-    const prevWeekDates = Array.from({ length: 5 }, (_, i) => {
-      const d = new Date(start);
-      d.setDate(start.getDate() + i);
-      return localDateStr(d);
-    });
+    const { start, end } = getWeekDateRange(prevWeek);
+    const prevWeekDates: string[] = [];
+    const current = new Date(start);
+    while (current <= end) {
+      prevWeekDates.push(localDateStr(current));
+      current.setDate(current.getDate() + 1);
+    }
 
     // 지난 주 실제 지급액 (week 속성으로 필터링, 없으면 날짜로)
     const prevAwarded = (state.awardRecords || [])
