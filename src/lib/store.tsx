@@ -328,6 +328,7 @@ function applyFirebaseData(data: Record<string, unknown>, dispatch: React.Dispat
     attitudeRecords:   toArr<AttitudeRecord>(data.attitude),
     makeupRequests:    toArr<MakeupRequest>(data.makeup),
     reports:           toArr<StudentReport>(data.reports),
+    awardRecords:      toArr<AwardRecord>(data.awardRecords),
     currentWeek:       (data.currentWeek as string | undefined) ?? initialData.currentWeek,
     attitudeDollarSettings: (data.settings as Record<string,unknown>)?.attitudeDollar as AttitudeDollarSettings ?? initialData.attitudeDollarSettings,
     dollarConditions:  fbConditions.length ? fbConditions : initialData.dollarConditions,
