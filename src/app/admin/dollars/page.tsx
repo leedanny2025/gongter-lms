@@ -1086,55 +1086,133 @@ export default function DollarsPage() {
 
       {/* ── 월간 현황 탭 ── */}
       {tab === 'monthly' && (
-        <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
-          <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 14 }}>📊 월간 달러 현황</div>
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', display: 'block' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: '100%' }}>
-              <thead>
-                <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
-                  <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', minWidth: 100 }}>학생</th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#059669', minWidth: 100 }}>월간 지급</th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#dc2626', minWidth: 100 }}>월간 구매</th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#0284c7', minWidth: 100 }}>순 지급액</th>
-                  <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#7c3aed', minWidth: 100 }}>총 보유</th>
-                </tr>
-              </thead>
-              <tbody>
-                {getMonthlyData().map((data, idx) => (
-                  <tr key={data.id} style={{ borderBottom: idx < state.students.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
-                    <td style={{ padding: '12px 14px' }}>
-                      <div style={{ fontWeight: 700, color: '#1e293b' }}>{data.name}</div>
-                      <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{data.grade} · {data.classGroup}</div>
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      <span style={{ fontWeight: 800, color: data.awarded > 0 ? '#059669' : '#94a3b8', fontSize: 14 }}>
-                        +${data.awarded}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right' }}>
-                      <span style={{ fontWeight: 800, color: data.purchased > 0 ? '#dc2626' : '#94a3b8', fontSize: 14 }}>
-                        -${data.purchased}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', background: data.net !== 0 ? (data.net > 0 ? '#f0fdf4' : '#fef2f2') : 'white' }}>
-                      <span style={{ fontWeight: 800, color: data.net > 0 ? '#16a34a' : data.net < 0 ? '#dc2626' : '#94a3b8', fontSize: 14 }}>
-                        {data.net > 0 ? '+' : ''}{data.net > 0 || data.net < 0 ? `$${data.net}` : '–'}
-                      </span>
-                    </td>
-                    <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800 }}>
-                      <span style={{ color: '#7c3aed', fontSize: 15 }}>
-                        ${data.total}
-                      </span>
-                    </td>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+          {/* 월간 수입 현황 */}
+          <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 14 }}>💰 월간 수입 현황</div>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', display: 'block' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: '100%' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', minWidth: 100 }}>학생</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#059669', minWidth: 120 }}>이번 달</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#10b981', minWidth: 120 }}>전체 누적</th>
                   </tr>
-                ))}
-                {state.students.length === 0 && (
-                  <tr>
-                    <td colSpan={5} style={{ padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>등록된 학생이 없습니다</td>
+                </thead>
+                <tbody>
+                  {getMonthlyData().map((data, idx) => (
+                    <tr key={data.id} style={{ borderBottom: idx < state.students.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{data.name}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{data.grade} · {data.classGroup}</div>
+                      </td>
+                      <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                        <span style={{ fontWeight: 800, color: data.awarded > 0 ? '#059669' : '#94a3b8', fontSize: 14 }}>
+                          ${data.awarded}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                        <span style={{ fontWeight: 800, color: '#059669', fontSize: 14 }}>
+                          ${data.total + data.purchased}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {state.students.length === 0 && (
+                    <tr>
+                      <td colSpan={3} style={{ padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>등록된 학생이 없습니다</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 월간 지출 현황 */}
+          <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 14 }}>🛍️ 월간 지출 현황</div>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', display: 'block' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: '100%' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', minWidth: 100 }}>학생</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#dc2626', minWidth: 120 }}>이번 달</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#ef4444', minWidth: 120 }}>전체 누적</th>
                   </tr>
-                )}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {getMonthlyData().map((data, idx) => {
+                    const totalPurchased = (state.purchases || [])
+                      .filter(p => p.studentId === data.id)
+                      .reduce((sum, p) => sum + p.cost, 0);
+                    return (
+                      <tr key={data.id} style={{ borderBottom: idx < state.students.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                        <td style={{ padding: '12px 14px' }}>
+                          <div style={{ fontWeight: 700, color: '#1e293b' }}>{data.name}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{data.grade} · {data.classGroup}</div>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, color: data.purchased > 0 ? '#dc2626' : '#94a3b8', fontSize: 14 }}>
+                            ${data.purchased}
+                          </span>
+                        </td>
+                        <td style={{ padding: '12px 14px', textAlign: 'right' }}>
+                          <span style={{ fontWeight: 800, color: '#dc2626', fontSize: 14 }}>
+                            ${totalPurchased}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {state.students.length === 0 && (
+                    <tr>
+                      <td colSpan={3} style={{ padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>등록된 학생이 없습니다</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* 월간 순 지급액 현황 */}
+          <div style={{ background: 'white', borderRadius: 16, padding: 20, boxShadow: '0 2px 8px rgba(0,0,0,0.06)' }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: '#1e293b', marginBottom: 14 }}>📈 월간 순 지급액 현황</div>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch', touchAction: 'pan-x', display: 'block' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13, minWidth: '100%' }}>
+                <thead>
+                  <tr style={{ background: '#f8fafc', borderBottom: '2px solid #e2e8f0' }}>
+                    <th style={{ padding: '12px 14px', textAlign: 'left', fontWeight: 700, color: '#475569', minWidth: 100 }}>학생</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#0284c7', minWidth: 120 }}>이번 달</th>
+                    <th style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, color: '#7c3aed', minWidth: 120 }}>보유액</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {getMonthlyData().map((data, idx) => (
+                    <tr key={data.id} style={{ borderBottom: idx < state.students.length - 1 ? '1px solid #f1f5f9' : 'none' }}>
+                      <td style={{ padding: '12px 14px' }}>
+                        <div style={{ fontWeight: 700, color: '#1e293b' }}>{data.name}</div>
+                        <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2 }}>{data.grade} · {data.classGroup}</div>
+                      </td>
+                      <td style={{ padding: '12px 14px', textAlign: 'right', background: data.net !== 0 ? (data.net > 0 ? '#f0fdf4' : '#fef2f2') : 'white' }}>
+                        <span style={{ fontWeight: 800, color: data.net > 0 ? '#16a34a' : data.net < 0 ? '#dc2626' : '#94a3b8', fontSize: 14 }}>
+                          {data.net > 0 ? '+' : ''}{data.net > 0 || data.net < 0 ? `$${data.net}` : '–'}
+                        </span>
+                      </td>
+                      <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 800 }}>
+                        <span style={{ color: '#7c3aed', fontSize: 15 }}>
+                          ${data.total}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                  {state.students.length === 0 && (
+                    <tr>
+                      <td colSpan={3} style={{ padding: 20, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>등록된 학생이 없습니다</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
           </div>
         </div>
       )}
