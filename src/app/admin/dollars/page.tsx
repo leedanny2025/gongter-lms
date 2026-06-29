@@ -172,7 +172,7 @@ export default function DollarsPage() {
   };
 
   const getWeeklyDollarBreakdown = (studentId: string) => {
-    // 예상 지급액
+    // 예상 지급액 (아직 지급되지 않았을 수 있음)
     const expectedAwarded = calcDollars(studentId);
 
     // 이번 주 실제 구매액
@@ -188,6 +188,13 @@ export default function DollarsPage() {
     return { awarded: expectedAwarded, purchased: weeklyPurchased };
   };
 
+  const getCurrentWeekAwarded = (studentId: string) => {
+    // 이번 주에 실제로 지급된 금액 (week 속성으로 필터링)
+    return (state.awardRecords || [])
+      .filter(a => a.studentId === studentId && a.week === week)
+      .reduce((sum, a) => sum + a.amount, 0);
+  };
+
   const getPrevWeekDollars = (studentId: string) => {
     const prevWeek = getPrevWeek(week);
     const { start } = getWeekDateRange(prevWeek);
@@ -197,12 +204,12 @@ export default function DollarsPage() {
       return localDateStr(d);
     });
 
-    // 지난 주 실제 지급액
+    // 지난 주 실제 지급액 (week 속성으로 필터링)
     const prevAwarded = (state.awardRecords || [])
-      .filter(a => a.studentId === studentId && prevWeekDates.includes(a.awardedAt.split('T')[0]))
+      .filter(a => a.studentId === studentId && a.week === prevWeek)
       .reduce((sum, a) => sum + a.amount, 0);
 
-    // 지난 주 실제 구매액
+    // 지난 주 실제 구매액 (날짜로 필터링)
     const prevPurchased = (state.purchases || [])
       .filter(p => p.studentId === studentId && prevWeekDates.includes(p.purchasedAt.split('T')[0]))
       .reduce((sum, p) => sum + p.cost, 0);
@@ -564,7 +571,8 @@ export default function DollarsPage() {
                         )}
                         <td style={{ padding: '12px 14px', textAlign: 'right' }}>
                           {(() => {
-                            const { awarded, purchased } = getWeeklyDollarBreakdown(student.id);
+                            const awarded = getCurrentWeekAwarded(student.id);
+                            const purchased = getWeeklyDollarBreakdown(student.id).purchased;
                             return (
                               <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
                                 {awarded > 0 && <span style={{ fontWeight: 800, color: '#16a34a', fontSize: 13 }}>+${awarded}</span>}
