@@ -189,9 +189,15 @@ export default function DollarsPage() {
   };
 
   const getCurrentWeekAwarded = (studentId: string) => {
-    // 이번 주에 실제로 지급된 금액 (week 속성으로 필터링)
+    // 이번 주에 실제로 지급된 금액 (week 속성으로 필터링, 없으면 날짜로)
+    const weekDates = getWeekDates();
     return (state.awardRecords || [])
-      .filter(a => a.studentId === studentId && a.week === week)
+      .filter(a => {
+        if (a.studentId !== studentId) return false;
+        // week 필드가 있으면 week으로 필터링, 없으면 날짜로 필터링
+        if (a.week) return a.week === week;
+        return weekDates.includes(a.awardedAt.split('T')[0]);
+      })
       .reduce((sum, a) => sum + a.amount, 0);
   };
 
@@ -204,9 +210,14 @@ export default function DollarsPage() {
       return localDateStr(d);
     });
 
-    // 지난 주 실제 지급액 (week 속성으로 필터링)
+    // 지난 주 실제 지급액 (week 속성으로 필터링, 없으면 날짜로)
     const prevAwarded = (state.awardRecords || [])
-      .filter(a => a.studentId === studentId && a.week === prevWeek)
+      .filter(a => {
+        if (a.studentId !== studentId) return false;
+        // week 필드가 있으면 week으로 필터링, 없으면 날짜로 필터링
+        if (a.week) return a.week === prevWeek;
+        return prevWeekDates.includes(a.awardedAt.split('T')[0]);
+      })
       .reduce((sum, a) => sum + a.amount, 0);
 
     // 지난 주 실제 구매액 (날짜로 필터링)
