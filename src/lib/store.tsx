@@ -442,7 +442,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         break;
       case 'AWARD_DOLLARS': {
         const student = s.students.find(x => x.id === action.payload.studentId);
-        if (student) { const u = { ...student, dollars: Math.max(0, student.dollars + action.payload.amount) }; fbSet(`lms/students/${student.id}`, u); sheetsSync.dollar({ studentName: student.name, amount: action.payload.amount, reason: action.payload.reason || '주간 달러 지급', newBalance: u.dollars }); } break;
+        if (student) {
+          const u = { ...student, dollars: Math.max(0, student.dollars + action.payload.amount) };
+          fbSet(`lms/students/${student.id}`, u);
+          // awardRecords를 Firebase에 저장
+          const awardRecord = {
+            id: Date.now().toString(),
+            studentId: action.payload.studentId,
+            studentName: student.name,
+            amount: action.payload.amount,
+            week: stateRef.current.currentWeek,
+            awardedAt: new Date().toISOString(),
+          };
+          fbSet(`lms/awardRecords/${awardRecord.id}`, awardRecord);
+          sheetsSync.dollar({ studentName: student.name, amount: action.payload.amount, reason: action.payload.reason || '주간 달러 지급', newBalance: u.dollars });
+        }
+        break;
       }
       case 'ADD_SHOP_ITEM':
       case 'UPDATE_SHOP_ITEM':
