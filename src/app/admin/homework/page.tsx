@@ -670,11 +670,25 @@ export default function HomeworkPage() {
                           </div>
                           <div style={{ padding: '5px 4px', minHeight: 36, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2 }}>
                             {hw && m ? (
-                              <button onClick={() => setDetailHW(hw)} style={{ padding: '2px 6px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: m.bg, color: m.color, border: `1px solid ${m.color}30`, cursor: 'pointer', minHeight: 'unset', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width: '100%' }}>
-                                {hwNum && <span style={{ fontSize: 9, fontWeight: 800, opacity: 0.7 }}>#{hwNum}</span>}
-                                {(() => { const d = hw.submittedAt || hw.agreedAt; const date = d ? new Date(d) : null; return date ? <span style={{ fontSize: 9, opacity: 0.75 }}>{`${date.getMonth()+1}/${date.getDate()}`}</span> : null; })()}
-                                <span>{m.label}</span>
-                              </button>
+                              <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, width: '100%' }}>
+                                <button onClick={() => setDetailHW(hw)} style={{ padding: '2px 6px', borderRadius: 6, fontSize: 10, fontWeight: 700, background: m.bg, color: m.color, border: `1px solid ${m.color}30`, cursor: 'pointer', minHeight: 'unset', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1, width: '100%' }}>
+                                  {hwNum && <span style={{ fontSize: 9, fontWeight: 800, opacity: 0.7 }}>#{hwNum}</span>}
+                                  {(() => { const d = hw.submittedAt || hw.agreedAt; const date = d ? new Date(d) : null; return date ? <span style={{ fontSize: 9, opacity: 0.75 }}>{`${date.getMonth()+1}/${date.getDate()}`}</span> : null; })()}
+                                  <span>{m.label}</span>
+                                </button>
+                                {hw.status === 'agreed' && hw.expectedSubmitDate && (() => {
+                                  const expected = new Date(hw.expectedSubmitDate);
+                                  expected.setHours(0, 0, 0, 0);
+                                  const today = new Date();
+                                  today.setHours(0, 0, 0, 0);
+                                  const canProcess = expected.getTime() <= today.getTime();
+                                  return canProcess ? (
+                                    <button onClick={() => { dispatch({ type: 'CONFIRM_HOMEWORK', payload: { id: hw.id, result: 'confirmed' } }); }} style={{ fontSize: 8, padding: '2px 4px', borderRadius: 4, border: 'none', background: '#22c55e', color: 'white', cursor: 'pointer', fontWeight: 700, minHeight: 'unset', whiteSpace: 'nowrap' }}>
+                                      완료
+                                    </button>
+                                  ) : null;
+                                })()}
+                              </div>
                             ) : isScheduled ? (
                               <button onClick={() => setAddHWTarget({ student, day })} style={{ fontSize: 9, color: '#cbd5e1', background: 'none', border: '1px dashed #e2e8f0', borderRadius: 5, padding: '2px 6px', cursor: 'pointer', minHeight: 'unset' }}>
                                 + 등록
