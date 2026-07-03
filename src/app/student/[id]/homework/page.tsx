@@ -368,8 +368,13 @@ export default function StudentHomeworkPage() {
       studentId: id, studentName: student?.name || '', week, day: activeDay,
       computer: get('computer'), textbook: get('textbook'),
       vocabulary: get('vocabulary'), other: get('other'),
-      submittedAt: new Date().toISOString(), status: 'pending',
-      expectedSubmitDate: expectedDate || undefined,
+      submittedAt: existing?.submittedAt || new Date().toISOString(), status: existing?.status || 'pending',
+      expectedSubmitDate: expectedDate || existing?.expectedSubmitDate || undefined,
+      // 기존 필드 보존
+      ...(existing?.agreedAt && { agreedAt: existing.agreedAt }),
+      ...(existing?.completedAt && { completedAt: existing.completedAt }),
+      ...(existing?.approvedAt && { approvedAt: existing.approvedAt }),
+      ...(existing?.note && { note: existing.note }),
     };
     existing ? dispatch({ type: 'UPDATE_HOMEWORK', payload: record }) : dispatch({ type: 'ADD_HOMEWORK', payload: record });
     setIsEditing(false);
