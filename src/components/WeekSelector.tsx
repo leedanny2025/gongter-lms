@@ -19,7 +19,7 @@ export default function WeekSelector({ week, onChange, compact = false }: Props)
       background: 'white', borderRadius: compact ? 10 : 12,
       border: '1px solid #e2e8f0', padding: compact ? '6px 10px' : '8px 14px',
     }}>
-      <button onClick={() => onChange(getPrevWeek(week))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#64748b' }}>
+      <button aria-label="이전 주" onClick={() => onChange(getPrevWeek(week))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, minWidth: 44, minHeight: 44, justifyContent: 'center', display: 'flex', alignItems: 'center', color: '#64748b' }}>
         <ChevronLeft size={compact ? 16 : 18} />
       </button>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: compact ? 110 : 130 }}>
@@ -29,7 +29,7 @@ export default function WeekSelector({ week, onChange, compact = false }: Props)
           <span style={{ fontSize: 10, background: '#eff0ff', color: '#6366f1', padding: '1px 6px', borderRadius: 10, fontWeight: 700 }}>이번주</span>
         )}
       </div>
-      <button onClick={() => onChange(getNextWeek(week))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 2, display: 'flex', alignItems: 'center', color: '#64748b' }}>
+      <button aria-label="다음 주" onClick={() => onChange(getNextWeek(week))} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 8, minWidth: 44, minHeight: 44, justifyContent: 'center', display: 'flex', alignItems: 'center', color: '#64748b' }}>
         <ChevronRight size={compact ? 16 : 18} />
       </button>
     </div>

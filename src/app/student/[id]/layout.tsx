@@ -50,7 +50,7 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
       </div>
 
       {/* 하단 네비게이션 */}
-      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', zIndex: 50, boxShadow: '0 -4px 12px rgba(0,0,0,0.08)', paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x' }}>
+      <nav style={{ position: 'fixed', bottom: 0, left: 0, right: 0, background: 'white', borderTop: '1px solid #e2e8f0', display: 'flex', zIndex: 50, boxShadow: '0 -4px 12px rgba(0,0,0,0.08)', paddingBottom: 'env(safe-area-inset-bottom)', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto' }}>
         {tabs.map(({ href, label, icon: Icon, badge }) => {
           const active = pathname === href;
           return (
@@ -61,7 +61,7 @@ export default function StudentIdLayout({ children }: { children: React.ReactNod
               color: active ? '#6366f1' : '#94a3b8',
               borderTop: active ? '2px solid #6366f1' : '2px solid transparent',
               background: active ? '#f5f3ff' : 'white',
-              touchAction: 'pan-y',
+              touchAction: 'manipulation', minHeight: 44,
               WebkitTapHighlightColor: 'transparent',
               userSelect: 'none',
             }}>

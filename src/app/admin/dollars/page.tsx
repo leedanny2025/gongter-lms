@@ -1,11 +1,15 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState } from 'react';
+import Link from 'next/link';
+import { getWeeklyProgress } from '@/lib/weekly-progress';
 import { useStore } from '@/lib/store';
 import { DollarSign, Award, CheckCircle, XCircle, Star, X, ShoppingCart, Plus, Trash2, Package } from 'lucide-react';
 import WeekSelector from '@/components/WeekSelector';
 import { ShopItem } from '@/lib/types';
-import { getWeekDateRange, localDateStr, getPrevWeek } from '@/lib/utils';
+import { getWeekDateRange, getLearningWeekRange, koreanDateStr, localDateStr, getPrevWeek } from '@/lib/utils';
 
 type AwardEntry = { name: string; amount: number };
 type Tab = 'award' | 'shop';
@@ -17,7 +21,7 @@ export default function DollarsPage() {
   const [viewMode, setViewMode] = useState<ViewMode>('table');
 
   // 지급 탭 state
-  const [week, setWeek] = useState(state.currentWeek);
+  const [week, setWeek] = useSelectedWeek();
   const [selectedStudent, setSelectedStudent] = useState<string | null>(null);
   const [manualAmount, setManualAmount] = useState('');
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
@@ -49,13 +53,10 @@ export default function DollarsPage() {
   const basicConditions = enabledConditions.filter(c => ['attendance', 'homework', 'test'].includes(c.type));
   const bonusConditions = enabledConditions.filter(c => ['attitude', 'custom'].includes(c.type));
 
-  const getAttitudeScore = (studentId: string) =>
-    (state.attitudeRecords || [])
-      .filter(r => r.studentId === studentId && r.week === week)
-      .reduce((sum, r) => sum + r.shadowing + r.learningAttitude + r.basicAttitude, 0);
-
   const getWeekDates = () => {
-    const { start, end } = getWeekDateRange(week);
+    const period = getLearningWeekRange(week);
+    const start = new Date(`${period.start}T12:00:00`);
+    const end = new Date(`${period.end}T12:00:00`);
     const dates: string[] = [];
     const current = new Date(start);
     while (current <= end) {
@@ -65,62 +66,9 @@ export default function DollarsPage() {
     return dates;
   };
 
-  const getStatus = (studentId: string) => {
-    const weekDates = getWeekDates();
-    const weekHW = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week);
-    const weekTest = state.testRecords.find(t => t.studentId === studentId && t.week === week);
-    const weekAtt = state.attendanceRecords.filter(a => a.studentId === studentId && weekDates.includes(a.date));
-    const attDays = weekAtt.filter(a => a.status !== 'absent').length;
-    const homeworkDone = weekHW.some(h => h.status === 'approved');
-    const attitudeScore = getAttitudeScore(studentId);
-    const { tier3 } = state.attitudeDollarSettings;
-    return {
-      attendance: attDays >= 2, homework: homeworkDone,
-      test: weekTest?.status === 'confirmed',
-      attitude: attitudeScore >= (tier3.minScore || 1), attDays,
-    };
-  };
-
-  const calcDollars = (studentId: string) => {
-    let total = 0;
-    basicConditions.forEach(c => {
-      const { attendanceCount, homeworkCount, testCount, total: maxDays } = getAchievementCounts(studentId);
-      let rate = 0;
-      if (c.type === 'attendance') rate = attendanceCount / maxDays;
-      else if (c.type === 'homework') rate = homeworkCount / maxDays;
-      else if (c.type === 'test') rate = testCount / maxDays;
-      const earnedAmount = Math.round(c.amount * rate);
-      total += earnedAmount;
-    });
-    bonusConditions.forEach(c => {
-      total += conditionMet(studentId, c.type) ? c.amount : 0;
-    });
-    return total;
-  };
-
-  const getAwardBreakdown = (studentId: string): AwardEntry[] => {
-    const breakdown: AwardEntry[] = [];
-    const { attendanceCount, homeworkCount, testCount, total: maxDays } = getAchievementCounts(studentId);
-
-    basicConditions.forEach(c => {
-      let rate = 0;
-      if (c.type === 'attendance') rate = attendanceCount / maxDays;
-      else if (c.type === 'homework') rate = homeworkCount / maxDays;
-      else if (c.type === 'test') rate = testCount / maxDays;
-      const earnedAmount = Math.round(c.amount * rate);
-      if (earnedAmount > 0) {
-        breakdown.push({ name: c.name, amount: earnedAmount });
-      }
-    });
-
-    bonusConditions.forEach(c => {
-      if (conditionMet(studentId, c.type)) {
-        breakdown.push({ name: c.name, amount: c.amount });
-      }
-    });
-
-    return breakdown;
-  };
+  const progressFor = (studentId: string) => getWeeklyProgress(state, state.students.find(s => s.id === studentId)!, week);
+  const calcDollars = (studentId: string) => progressFor(studentId).earned;
+  const getAwardBreakdown = (studentId: string): AwardEntry[] => progressFor(studentId).breakdown.filter(c => c.earned > 0).map(c => ({ name: c.name, amount: c.earned }));
 
   const getMonthlyData = () => {
     const now = new Date();
@@ -148,26 +96,8 @@ export default function DollarsPage() {
     });
   };
 
-  const getStudentScheduledDays = (studentId: string) => {
-    const student = state.students.find(s => s.id === studentId);
-    return student?.scheduleDays?.length || 5;
-  };
-
-  const getAchievementCounts = (studentId: string) => {
-    const weekDates = getWeekDates();
-    const total = getStudentScheduledDays(studentId);
-    const attendanceCount = state.attendanceRecords.filter(a => a.studentId === studentId && weekDates.includes(a.date) && a.status !== 'absent').length;
-    // 이번 주의 모든 숙제 중 완료/승인된 것 카운트
-    const homeworkCount = state.dayHomeworks.filter(h => h.studentId === studentId && h.week === week && (h.status === 'confirmed' || h.status === 'approved')).length;
-    const testCount = state.testRecords.filter(t => t.studentId === studentId && t.week === week && t.status === 'confirmed').length;
-    return { attendanceCount, homeworkCount, testCount, total };
-  };
-
-  const conditionMet = (studentId: string, type: string) => {
-    const s = getStatus(studentId);
-    return type === 'attendance' ? s.attendance : type === 'homework' ? s.homework
-      : type === 'test' ? s.test : type === 'attitude' ? s.attitude : false;
-  };
+  const getAchievementCounts = (studentId: string) => progressFor(studentId);
+  const conditionMet = (studentId: string, type: string) => progressFor(studentId).breakdown.some(c => c.type === type && c.met);
 
   const isStudentAwarded = (studentId: string) => {
     return (state.awardRecords || []).some(a => a.studentId === studentId && a.week === week);
@@ -182,7 +112,7 @@ export default function DollarsPage() {
     const weeklyPurchased = (state.purchases || [])
       .filter(p => {
         if (p.studentId !== studentId) return false;
-        const pDate = p.purchasedAt.split('T')[0];
+        const pDate = koreanDateStr(new Date(p.purchasedAt));
         return weekDates.includes(pDate);
       })
       .reduce((sum, p) => sum + p.cost, 0);
@@ -190,25 +120,13 @@ export default function DollarsPage() {
     return { awarded: expectedAwarded, purchased: weeklyPurchased };
   };
 
-  const getCurrentWeekAwarded = (studentId: string) => {
-    // 이번 주에 실제로 지급된 금액 (week 속성으로 필터링, 없으면 날짜로)
-    const weekDates = getWeekDates();
-    const allAwards = state.awardRecords || [];
-    const filtered = allAwards
-      .filter(a => {
-        if (a.studentId !== studentId) return false;
-        // week 필드가 있으면 week으로 필터링, 없으면 날짜로 필터링
-        if (a.week) return a.week === week;
-        return weekDates.includes(a.awardedAt.split('T')[0]);
-      });
-    const total = filtered.reduce((sum, a) => sum + a.amount, 0);
-    console.log(`[getCurrentWeekAwarded] ${studentId}:`, { week, allAwardCount: allAwards.length, filteredCount: filtered.length, total, allAwards, filtered });
-    return total;
-  };
+  const getCurrentWeekAwarded = (studentId: string) => progressFor(studentId).awarded;
 
   const getPrevWeekDollars = (studentId: string) => {
     const prevWeek = getPrevWeek(week);
-    const { start, end } = getWeekDateRange(prevWeek);
+    const period = getLearningWeekRange(prevWeek);
+    const start = new Date(`${period.start}T12:00:00`);
+    const end = new Date(`${period.end}T12:00:00`);
     const prevWeekDates: string[] = [];
     const current = new Date(start);
     while (current <= end) {
@@ -222,13 +140,13 @@ export default function DollarsPage() {
         if (a.studentId !== studentId) return false;
         // week 필드가 있으면 week으로 필터링, 없으면 날짜로 필터링
         if (a.week) return a.week === prevWeek;
-        return prevWeekDates.includes(a.awardedAt.split('T')[0]);
+        return prevWeekDates.includes(koreanDateStr(new Date(a.awardedAt)));
       })
       .reduce((sum, a) => sum + a.amount, 0);
 
     // 지난 주 실제 구매액 (날짜로 필터링)
     const prevPurchased = (state.purchases || [])
-      .filter(p => p.studentId === studentId && prevWeekDates.includes(p.purchasedAt.split('T')[0]))
+      .filter(p => p.studentId === studentId && prevWeekDates.includes(koreanDateStr(new Date(p.purchasedAt))))
       .reduce((sum, p) => sum + p.cost, 0);
 
     return { awarded: prevAwarded, purchased: prevPurchased };
@@ -271,7 +189,7 @@ export default function DollarsPage() {
       .reduce((sum, a) => sum + (a.amount ?? 0), 0);
 
     // upToWeek 이후의 구매액 (역계산용)
-    const weekDateRange = getWeekDateRange(upToWeek);
+    const weekDateRange = getLearningWeekRange(upToWeek);
     const weekEndDate = new Date(weekDateRange.end);
     weekEndDate.setHours(23, 59, 59, 999);
 
@@ -308,7 +226,7 @@ export default function DollarsPage() {
     const amount = calcDollars(studentId);
     if (amount === 0) return;
     const student = state.students.find(s => s.id === studentId);
-    dispatch({ type: 'AWARD_DOLLARS', payload: { studentId, amount } });
+    dispatch({ type: 'AWARD_DOLLARS', payload: { studentId, amount, week } });
     setAwardSummary([{ name: student?.name || '', amount }]);
   };
 
@@ -324,7 +242,7 @@ export default function DollarsPage() {
       const amount = calcDollars(id);
       if (amount > 0) {
         const student = state.students.find(s => s.id === id);
-        dispatch({ type: 'AWARD_DOLLARS', payload: { studentId: id, amount } });
+        dispatch({ type: 'AWARD_DOLLARS', payload: { studentId: id, amount, week } });
         results.push({ name: student?.name || '', amount });
       }
     });
@@ -337,7 +255,7 @@ export default function DollarsPage() {
   const awardManual = (studentId: string) => {
     const amount = Number(manualAmount);
     if (!amount || isNaN(amount)) return alert('금액 입력');
-    dispatch({ type: 'AWARD_DOLLARS', payload: { studentId, amount } });
+    dispatch({ type: 'AWARD_DOLLARS', payload: { studentId, amount, week } });
     setManualAmount('');
   };
 
@@ -422,6 +340,7 @@ export default function DollarsPage() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
         <div>
           <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0 }}>달러 관리</h1>
+          <Link href="/admin/weekly-notice" style={{ display: 'inline-block', padding: '10px 0', color: '#4f46e5', fontWeight: 700 }}>학생별 주간 공지표 보기 →</Link>
           <p style={{ color: '#64748b', marginTop: 2, fontSize: 13 }}>달러 지급 및 구매 처리</p>
         </div>
         {/* 탭 */}
@@ -530,7 +449,7 @@ export default function DollarsPage() {
           </div>
 
           {viewMode === 'table' && (
-            <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', minHeight: 'auto', display: 'block', width: '100%' }}>
+            <div className="card" style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', minHeight: 'auto', display: 'block', width: '100%' }}>
               <table style={{ width: 'auto', minWidth: '100%', borderCollapse: 'collapse', fontSize: 14, touchAction: 'auto', tableLayout: 'auto' }}>
                 <thead>
                   <tr style={{ borderBottom: '2px solid #e2e8f0' }}>
@@ -641,7 +560,7 @@ export default function DollarsPage() {
               const amount = calcDollars(student.id);
               const isExpanded = selectedStudent === student.id;
               const isBatchSelected = selectedIds.has(student.id);
-              const basicEarned = basicConditions.reduce((s, c) => s + (conditionMet(student.id, c.type) ? c.amount : 0), 0);
+              const basicEarned = progressFor(student.id).breakdown.filter(c => ['attendance','homework','test'].includes(c.type)).reduce((sum, c) => sum + c.earned, 0);
               const bonusEarned = bonusConditions.reduce((s, c) => s + (conditionMet(student.id, c.type) ? c.amount : 0), 0);
 
               return (

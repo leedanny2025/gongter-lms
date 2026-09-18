@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState, useMemo, useRef } from 'react';
 import { useStore } from '@/lib/store';
 import { getWeekKey, getWeekDateRange, getPrevWeek, getNextWeek, DAY_LABELS, DAY_ORDER } from '@/lib/utils';
@@ -502,7 +504,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {sections.attendance && (
           <SectionCard title="출석 현황">
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '100%' }}>
               <thead>
                 <tr>
@@ -535,7 +537,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
 
         {sections.homework && (
           <SectionCard title="숙제 현황">
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '100%' }}>
               <thead>
                 <tr>
@@ -569,7 +571,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
             {testRecs.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#cbd5e1', padding: '16px 0', fontSize: 13 }}>이번 주 시험 기록 없음</div>
             ) : (
-              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '100%' }}>
                 <thead>
                   <tr>
@@ -603,7 +605,7 @@ function WeeklyReport({ studentId, week, sections, printRef }: {
 
         {sections.attitude && (
           <SectionCard title="태도 평가">
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '100%' }}>
               <thead>
                 <tr>
@@ -736,7 +738,7 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
         {(sections.attendance || sections.homework) && (
           <SectionCard title="주별 학습 현황">
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '100%' }}>
               <thead>
                 <tr>
@@ -775,7 +777,7 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
             {allTests.length === 0 ? (
               <div style={{ textAlign: 'center', color: '#cbd5e1', padding: '16px 0', fontSize: 13 }}>이번 달 시험 기록 없음</div>
             ) : (
-              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '100%' }}>
                 <thead>
                   <tr>
@@ -809,7 +811,7 @@ function MonthlyReport({ studentId, monthKey, sections, printRef }: {
 
         {sections.attitude && (
           <SectionCard title="태도 평가">
-            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+            <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: '100%' }}>
               <thead><tr>
                 <th style={SCR_TH}>항목</th>
@@ -851,7 +853,7 @@ export default function ReportsPage() {
   const { state } = useStore();
   const [selectedStudentId, setSelectedStudentId] = useState<string>(state.students[0]?.id ?? '');
   const [reportType, setReportType] = useState<'weekly' | 'monthly'>('weekly');
-  const [week, setWeek] = useState(state.currentWeek);
+  const [week, setWeek] = useSelectedWeek();
   const [monthKey, setMonthKey] = useState(() => {
     const d = new Date();
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;

@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useMemo, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
@@ -292,7 +294,7 @@ export default function StudentHomeworkPage() {
   const id = params.id as string;
   const { state, dispatch } = useStore();
   const student = state.students.find(s => s.id === id);
-  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
+  const [selectedWeek, setSelectedWeek] = useSelectedWeek();
   const week = selectedWeek;
 
   const todayDay = (): HomeworkDay => {

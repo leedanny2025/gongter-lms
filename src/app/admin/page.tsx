@@ -1,6 +1,9 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState, useRef, useEffect } from 'react';
+import { getWeeklyProgress } from '@/lib/weekly-progress';
 import { useStore } from '@/lib/store';
 import { Users, DollarSign, BookOpen, ClipboardCheck, Calendar, TrendingUp, Clock, X, CheckCircle } from 'lucide-react';
 import { TestRecord, DayHomework, AttendanceRecord, HomeworkDay } from '@/lib/types';
@@ -52,8 +55,8 @@ function HomeworkDashModal({ hw, studentId, studentName, day, week, onClose, onA
   const inputStyle = { fontSize: 13, padding: '7px 10px', borderRadius: 8, border: '1px solid #e2e8f0', width: '100%', boxSizing: 'border-box' as const };
 
   return (
-    <div onPointerDown={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-      <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)', maxHeight: '90vh', overflowY: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>숙제 상세</h3>
@@ -132,8 +135,8 @@ function AttDashModal({ rec, studentId, studentName, classGroup, date, onClose, 
     onClose();
   };
   return (
-    <div onPointerDown={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-      <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+    <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+      <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
           <div>
             <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>{studentName}</h3>
@@ -229,7 +232,7 @@ const NAME_CELL: React.CSSProperties = {
 
 export default function AdminDashboard() {
   const { state, dispatch } = useStore();
-  const [week, setWeek] = useState(state.currentWeek);
+  const [week, setWeek] = useSelectedWeek();
   const [testPopup, setTestPopup] = useState<{ test: TestRecord; studentName: string } | null>(null);
   const [testEditScore, setTestEditScore] = useState('');
   const [hwPopup, setHwPopup] = useState<{ hw: DayHomework | null; studentId: string; studentName: string; day: string; week: string } | null>(null);
@@ -261,52 +264,8 @@ export default function AdminDashboard() {
   const [makeupEditRemainingHours, setMakeupEditRemainingHours] = useState<string>('');
   const [makeupEditReason, setMakeupEditReason] = useState<string>('');
 
-  // 매주 월요일에 지급 예정액 자동 계산
-  useEffect(() => {
-    const checkAndUpdatePendingDollars = () => {
-      const now = new Date();
-      const dayOfWeek = now.getDay();
-      const isMonday = dayOfWeek === 1;
-
-      if (isMonday) {
-        const currentWeek = state.currentWeek;
-
-        // 각 학생의 이번주 지급액 계산
-        state.students.forEach(student => {
-          const alreadyAwarded = student.weeklyDollarsAwarded?.[currentWeek] || 0;
-          if (alreadyAwarded === 0) {
-            // 아직 지급하지 않았으면, weeklyPendingDollars 계산
-            let total = 0;
-            const enabledConditions = state.dollarConditions.filter(c => c.enabled);
-            const basicConditions = enabledConditions.filter(c => ['attendance', 'homework', 'test'].includes(c.type));
-
-            // 기본 조건 계산
-            basicConditions.forEach(c => {
-              if (c.type === 'attendance') {
-                const presentCount = state.attendanceRecords.filter(a => a.studentId === student.id && a.status !== 'absent').length;
-                const total_required = student.scheduleDays?.length || 5;
-                total += Math.round(c.amount * (presentCount / total_required));
-              }
-            });
-
-            if (total !== student.weeklyPendingDollars) {
-              // 최신 state에서 학생 찾아서 업데이트 (dollars 손실 방지)
-              const latestStudent = state.students.find(s => s.id === student.id);
-              if (latestStudent) {
-                dispatch({ type: 'UPDATE_STUDENT', payload: { ...latestStudent, weeklyPendingDollars: total } });
-              }
-            }
-          }
-        });
-      }
-    };
-
-    checkAndUpdatePendingDollars();
-  }, [state.currentWeek, state.dollarConditions, state.attendanceRecords, dispatch]);
-
   const handleWeekChange = (w: string) => {
     setWeek(w);
-    dispatch({ type: 'SET_WEEK', payload: w });
   };
 
   const todayStr = localDateStr();
@@ -404,60 +363,14 @@ export default function AdminDashboard() {
   const basicConditions = enabledConditions.filter(c => ['attendance', 'homework', 'test'].includes(c.type));
   const bonusConditions = enabledConditions.filter(c => ['attitude', 'custom'].includes(c.type));
 
-  const getStudentScheduledDays = (studentId: string) => {
-    const student = state.students.find(s => s.id === studentId);
-    return student?.scheduleDays?.length || 5;
+  const progressFor = (id: string) => getWeeklyProgress(state, state.students.find(s => s.id === id)!, week);
+  const getAchievementRate = (id: string, type: string) => {
+    const p = progressFor(id);
+    const count = type === 'attendance' ? p.attendanceCount : type === 'homework' ? p.homeworkCount : type === 'test' ? p.testCount : 0;
+    return { count, total: p.total, rate: count / p.total };
   };
-
-  const getAchievementRate = (studentId: string, type: string): { rate: number; count: number; total: number } => {
-    if (type === 'attendance') {
-      const total = getStudentScheduledDays(studentId);
-      const count = state.attendanceRecords.filter(a => a.studentId === studentId && a.status !== 'absent').length;
-      return { rate: count / total, count, total };
-    }
-    if (type === 'homework') {
-      const total = getStudentScheduledDays(studentId);
-      const count = (state.dayHomeworks || []).filter(h => h.studentId === studentId && h.week === week && h.status === 'approved').length;
-      return { rate: count / total, count, total };
-    }
-    if (type === 'test') {
-      const total = getStudentScheduledDays(studentId);
-      const count = state.testRecords.filter(t => t.studentId === studentId && weekDates.includes(t.date) && t.status === 'confirmed').length;
-      return { rate: count / total, count, total };
-    }
-    return { rate: 0, count: 0, total: 1 };
-  };
-
-  const conditionMet = (studentId: string, type: string): boolean => {
-    if (type === 'attendance') return state.attendanceRecords.filter(a => a.studentId === studentId && a.status !== 'absent').length >= 2;
-    if (type === 'homework') return state.dayHomeworks.some(h => h.studentId === studentId && h.week === week && h.status === 'approved');
-    if (type === 'test') return state.testRecords.some(t => t.studentId === studentId && weekDates.includes(t.date) && t.status === 'confirmed');
-    if (type === 'attitude') {
-      const records = (state.attitudeRecords || []).filter(r => r.studentId === studentId && r.week === week);
-      const basicScore = records.reduce((sum, r) => sum + r.basicAttitude, 0);
-      const learningScore = records.reduce((sum, r) => sum + r.learningAttitude, 0);
-      const score = basicScore + learningScore;
-      return score >= (state.attitudeDollarSettings.tier3.minScore || 1);
-    }
-    return false;
-  };
-
-  const calcWeeklyDollars = (studentId: string) => {
-    const student = state.students.find(s => s.id === studentId);
-    const alreadyAwarded = student?.weeklyDollarsAwarded?.[week] || 0;
-    if (alreadyAwarded > 0) return 0; // 이미 지급했으면 0으로 표시
-
-    let total = 0;
-    basicConditions.forEach(c => {
-      const { rate } = getAchievementRate(studentId, c.type);
-      const earnedAmount = Math.round(c.amount * rate);
-      total += earnedAmount;
-    });
-    bonusConditions.forEach(c => {
-      total += conditionMet(studentId, c.type) ? c.amount : 0;
-    });
-    return total;
-  };
+  const conditionMet = (id: string, type: string) => progressFor(id).breakdown.some(c => c.type === type && c.met);
+  const calcWeeklyDollars = (id: string) => progressFor(id).earned;
 
   const DAY_KO = ['월', '화', '수', '목', '금'];
   const DAYS_HW = ['mon', 'tue', 'wed', 'thu', 'fri'] as const;
@@ -470,8 +383,8 @@ export default function AdminDashboard() {
     const totalAwarded = records.reduce((sum, r) => sum + r.amount, 0);
 
     return (
-      <div className="modal-backdrop" onPointerDown={() => setStudentDollarHistoryModal(null)}>
-        <div className="modal" style={{ maxWidth: 460 }} onPointerDown={e => e.stopPropagation()}>
+      <div className="modal-backdrop" onClick={() => setStudentDollarHistoryModal(null)}>
+        <div className="modal" style={{ maxWidth: 460 }} onClick={e => e.stopPropagation()}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>달러 지급 기록</div>
@@ -591,7 +504,7 @@ export default function AdminDashboard() {
             </h3>
             <a href="/admin/homework" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>전체 →</a>
           </div>
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6, minWidth: '100%' }}>
               <div />
               {DAY_KO.map(d => (
@@ -621,7 +534,7 @@ export default function AdminDashboard() {
                 return (
                   <div key={day} title={st === 'no_hw' ? '숙제없음' : st || (isScheduled ? '미제출' : '보충')}
                     onClick={openHw}
-                    style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: st === 'no_hw' ? 12 : 14, color: st === 'no_hw' ? '#94a3b8' : undefined, cursor: 'pointer', touchAction: 'pan-y' }}>
+                    style={{ textAlign: 'center', padding: '5px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : cell.bg, fontSize: st === 'no_hw' ? 12 : 14, color: st === 'no_hw' ? '#94a3b8' : undefined, cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>
                     {cell.e}
                   </div>
                 );
@@ -645,7 +558,7 @@ export default function AdminDashboard() {
             </h3>
             <a href="/admin/attendance" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>전체 →</a>
           </div>
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             {/* 요일 헤더 (날짜 포함) */}
             <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6, minWidth: '100%' }}>
               <div />
@@ -672,7 +585,7 @@ export default function AdminDashboard() {
 
                 if (!isScheduled && !rec) {
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f8fafc', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f8fafc', fontSize: 11, cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>
                       <div style={{ color: '#e2e8f0' }}>–</div>
                     </div>
                   );
@@ -680,7 +593,7 @@ export default function AdminDashboard() {
 
                 if (!rec) {
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>
                       <div style={{ color: '#cbd5e1' }}>{isPast ? '·' : ''}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
                     </div>
@@ -689,7 +602,7 @@ export default function AdminDashboard() {
 
                 if (rec.status === 'present') {
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : '#d1fae5', fontSize: 13, cursor: 'pointer', touchAction: 'pan-y' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: !isScheduled ? '#e0f2fe' : '#d1fae5', fontSize: 13, cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>
                       <div>{!isScheduled ? '보' : '✅'}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
                     </div>
@@ -710,7 +623,7 @@ export default function AdminDashboard() {
                     }
                   }
                   return (
-                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: '#fef3c7', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
+                    <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: '#fef3c7', fontSize: 11, cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>
                       <div>⏰</div>
                       <div style={{ fontSize: 9, fontWeight: 700, color: '#92400e' }}>{lateText}</div>
                       {prevAbsent && <div style={{ fontSize: 8, fontWeight: 700, color: '#f59e0b' }}>전결</div>}
@@ -720,7 +633,7 @@ export default function AdminDashboard() {
 
                 // absent
                 return (
-                  <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#fee2e2', fontSize: 13, cursor: 'pointer', touchAction: 'pan-y' }}>
+                  <div key={date} onClick={openAtt} style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#fee2e2', fontSize: 13, cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>
                     ❌
                   </div>
                 );
@@ -744,7 +657,7 @@ export default function AdminDashboard() {
             </h3>
             <a href="/admin/tests" style={{ fontSize: 12, color: '#6366f1', textDecoration: 'none' }}>전체 →</a>
           </div>
-          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+          <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
             <div style={{ display: 'grid', gridTemplateColumns: '64px repeat(5, 1fr)', gap: 4, marginBottom: 6, minWidth: '100%' }}>
               <div />
               {DAY_KO.map(d => (
@@ -760,14 +673,14 @@ export default function AdminDashboard() {
                 if (!test) {
                   return (
                     <div key={day} onClick={() => { setAddTestPopup({ studentId: s.id, studentName: s.name, date: dateForDay }); setAddTestSubject('영어 어휘 테스트'); setAddTestScore(''); setAddTestMax('20'); }}
-                      style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, color: '#cbd5e1', cursor: 'pointer', touchAction: 'pan-y' }}>·</div>
+                      style={{ textAlign: 'center', padding: '4px 2px', borderRadius: 6, background: '#f1f5f9', fontSize: 11, color: '#cbd5e1', cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>·</div>
                   );
                 }
                 const confirmed = test.status === 'confirmed';
                 const scoreText = test.score !== null ? `${test.score}개` : '-';
                 return (
                   <div key={day} title={test.subject} onClick={() => { setTestPopup({ test, studentName: s.name }); setTestEditScore(test.score?.toString() ?? ''); setTestEditSubject(test.subject); setTestEditMax(test.maxScore.toString()); setTestEditDate(test.date); }}
-                    style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: confirmed ? '#d1fae5' : '#fef3c7', fontSize: 11, cursor: 'pointer', touchAction: 'pan-y' }}>
+                    style={{ textAlign: 'center', padding: '3px 2px', borderRadius: 6, background: confirmed ? '#d1fae5' : '#fef3c7', fontSize: 11, cursor: 'pointer', touchAction: 'manipulation', minHeight: 44 }}>
                     <div>{confirmed ? '✅' : '⏳'}</div>
                     <div style={{ fontSize: 9, fontWeight: 700, color: confirmed ? '#15803d' : '#92400e' }}>{scoreText}</div>
                   </div>
@@ -853,7 +766,7 @@ export default function AdminDashboard() {
             const headerStyle: React.CSSProperties = { fontSize: 10, fontWeight: 700, textAlign: 'center', color: '#94a3b8' };
             return (
               <>
-                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+                <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
                   {/* 헤더 */}
                   <div style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 6, alignItems: 'end', minWidth: '100%' }}>
                     <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8' }}>학생</div>
@@ -866,10 +779,10 @@ export default function AdminDashboard() {
 
                   {/* 학생 행 */}
                   {state.students.map(s => {
-                    const pending = s.weeklyPendingDollars || 0;
+                    const pending = progressFor(s.id).earned;
                     return (
                       <div key={s.id} style={{ display: 'grid', gridTemplateColumns: colTemplate, gap: 4, marginBottom: 5, alignItems: 'center' }}>
-                        <div style={{ ...NAME_CELL, cursor: 'pointer', color: '#6366f1', fontWeight: 700, touchAction: 'pan-y' }} onClick={() => setStudentDollarHistoryModal({ studentId: s.id, studentName: s.name })}>{s.name}</div>
+                        <div style={{ ...NAME_CELL, cursor: 'pointer', color: '#6366f1', fontWeight: 700, touchAction: 'manipulation', minHeight: 44 }} onClick={() => setStudentDollarHistoryModal({ studentId: s.id, studentName: s.name })}>{s.name}</div>
                         <div style={{ textAlign: 'center', fontWeight: 800, fontSize: 13, color: '#7c3aed',
                           background: '#f3e8ff', borderRadius: 6, padding: '4px 2px' }}>
                           ${s.dollars}
@@ -1035,7 +948,7 @@ export default function AdminDashboard() {
                           color: '#b45309',
                           cursor: 'pointer',
                           border: editingHours === `${s.id}-weekly` ? '2px solid #b45309' : 'none',
-                          touchAction: 'pan-y',
+                          touchAction: 'manipulation', minHeight: 44,
                         }}
                       >
                         {editingHours === `${s.id}-weekly` ? (
@@ -1063,7 +976,7 @@ export default function AdminDashboard() {
                           color: '#dc2626',
                           cursor: 'pointer',
                           border: editingHours === `${s.id}-monthly` ? '2px solid #dc2626' : 'none',
-                          touchAction: 'pan-y',
+                          touchAction: 'manipulation', minHeight: 44,
                         }}
                       >
                         {editingHours === `${s.id}-monthly` ? (
@@ -1148,9 +1061,9 @@ export default function AdminDashboard() {
       </div>
 
             {testPopup && (
-        <div onPointerDown={() => setTestPopup(null)}
+        <div onClick={() => setTestPopup(null)}
           style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-          <div onPointerDown={e => e.stopPropagation()}
+          <div onClick={e => e.stopPropagation()}
             style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 340, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
@@ -1234,8 +1147,8 @@ export default function AdminDashboard() {
       )}
 
       {addTestPopup && (
-        <div onPointerDown={() => setAddTestPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-          <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => setAddTestPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 320, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>시험 점수 입력</h3>
@@ -1293,8 +1206,8 @@ export default function AdminDashboard() {
       )}
 
       {makeupEditPopup && (
-        <div onPointerDown={() => setMakeupEditPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
-          <div onPointerDown={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
+        <div onClick={() => setMakeupEditPopup(null)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: 16 }}>
+          <div onClick={e => e.stopPropagation()} style={{ background: 'white', borderRadius: 18, padding: 24, width: '100%', maxWidth: 360, boxShadow: '0 20px 60px rgba(0,0,0,0.2)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
               <div>
                 <h3 style={{ margin: 0, fontSize: 17, fontWeight: 800 }}>보충 요청 상세</h3>

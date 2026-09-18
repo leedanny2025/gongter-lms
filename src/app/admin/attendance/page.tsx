@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { AttendanceRecord } from '@/lib/types';
@@ -241,7 +243,7 @@ function QRModal({ onClose }: { onClose: () => void }) {
 
 function WeeklyView() {
   const { state, dispatch } = useStore();
-  const [week, setWeek] = useState(getWeekKey());
+  const [week, setWeek] = useSelectedWeek();
   const { start, label } = getWeekDateRange(week);
   const todayStr = localDateStr();
 
@@ -290,7 +292,7 @@ function WeeklyView() {
         셀을 클릭하면 출석→지각→결석 순서로 변경됩니다
       </div>
 
-      <div className="card" style={{ padding: 0, overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+      <div className="card" style={{ padding: 0, overflow: 'hidden', overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
         <table style={{ minWidth: 480, touchAction: 'auto', display: 'table', width: '100%' }}>
           <thead>
             <tr>
@@ -686,7 +688,7 @@ export default function AttendancePage() {
             </div>
           ) : (
             <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
-              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x', display: 'block' }}>
+              <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
                 <table style={{ touchAction: 'auto', display: 'table', width: '100%', minWidth: 'fit-content' }}>
                   <thead>
                     <tr>

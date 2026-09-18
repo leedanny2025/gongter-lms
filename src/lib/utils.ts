@@ -11,38 +11,47 @@ export function localTimeStr(d: Date = new Date()): string {
   return d.toTimeString().slice(0, 5);
 }
 
+// Learning weeks roll over at Saturday 00:00 Asia/Seoul (Friday midnight).
+// The key remains the ISO week of the upcoming Monday for existing weekday records.
+export function koreanDateStr(date: Date = new Date()): string {
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(date);
+  return ['year', 'month', 'day'].map(type => parts.find(p => p.type === type)!.value).join('-');
+}
 export function getWeekKey(date: Date = new Date()): string {
-  const d = new Date(date);
-  d.setHours(0, 0, 0, 0);
-  d.setDate(d.getDate() + 4 - (d.getDay() || 7));
-  const yearStart = new Date(d.getFullYear(), 0, 1);
-  const weekNo = Math.ceil((((d.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${d.getFullYear()}-W${weekNo.toString().padStart(2, '0')}`;
+  const d = new Date(`${koreanDateStr(date)}T00:00:00Z`);
+  if (d.getUTCDay() === 6) d.setUTCDate(d.getUTCDate() + 2);
+  else if (d.getUTCDay() === 0) d.setUTCDate(d.getUTCDate() + 1);
+  d.setUTCDate(d.getUTCDate() + 4 - (d.getUTCDay() || 7));
+  const year = d.getUTCFullYear();
+  const week = Math.ceil(((d.getTime() - Date.UTC(year, 0, 1)) / 86400000 + 1) / 7);
+  return `${year}-W${String(week).padStart(2, '0')}`;
 }
-
+// Monday-based calendar grid; Jan 4 is always in ISO week 1.
 export function getWeekDateRange(weekKey: string): { start: Date; end: Date; label: string } {
-  const [year, weekStr] = weekKey.split('-W');
-  const week = parseInt(weekStr);
-  const jan1 = new Date(parseInt(year), 0, 1);
-  const startDay = new Date(jan1.getTime() + (week - 1) * 7 * 86400000);
-  const dayOfWeek = startDay.getDay();
-  const monday = new Date(startDay.getTime() - (dayOfWeek === 0 ? 6 : dayOfWeek - 1) * 86400000);
-  const friday = new Date(monday.getTime() + 4 * 86400000);
-  const sunday = new Date(monday.getTime() + 6 * 86400000); // 월요일부터 일요일까지 포함
-  const label = `${monday.getMonth() + 1}/${monday.getDate()} ~ ${friday.getMonth() + 1}/${friday.getDate()}`;
-  return { start: monday, end: sunday, label };
+  const [year, week] = weekKey.split('-W').map(Number);
+  const january4 = new Date(year, 0, 4);
+  const start = new Date(year, 0, 4 - ((january4.getDay() + 6) % 7) + (week - 1) * 7);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
+  const friday = new Date(start); friday.setDate(start.getDate() + 4);
+  return { start, end, label: `${start.getMonth()+1}/${start.getDate()} ~ ${friday.getMonth()+1}/${friday.getDate()}` };
 }
-
-export function getPrevWeek(weekKey: string): string {
-  const { start } = getWeekDateRange(weekKey);
-  start.setDate(start.getDate() - 7);
-  return getWeekKey(start);
+export function getLearningWeekRange(week: string) {
+  const { start: monday } = getWeekDateRange(week);
+  const start = new Date(monday); start.setDate(monday.getDate() - 2);
+  const end = new Date(monday); end.setDate(monday.getDate() + 4);
+  return { start: localDateStr(start), end: localDateStr(end), label: `${start.getMonth()+1}/${start.getDate()}(토) ~ ${end.getMonth()+1}/${end.getDate()}(금)` };
 }
-
-export function getNextWeek(weekKey: string): string {
-  const { start } = getWeekDateRange(weekKey);
-  start.setDate(start.getDate() + 7);
-  return getWeekKey(start);
+export function getNextWeekRollover(now: Date = new Date()): Date {
+  const { end } = getLearningWeekRange(getWeekKey(now));
+  return new Date(new Date(`${end}T00:00:00+09:00`).getTime() + 86400000);
+}
+export function getPrevWeek(week: string): string {
+  const { start } = getWeekDateRange(week); start.setDate(start.getDate() - 7);
+  return getWeekKey(new Date(`${localDateStr(start)}T12:00:00+09:00`));
+}
+export function getNextWeek(week: string): string {
+  const { start } = getWeekDateRange(week); start.setDate(start.getDate() + 7);
+  return getWeekKey(new Date(`${localDateStr(start)}T12:00:00+09:00`));
 }
 
 export const DAY_LABELS: Record<HomeworkDay, string> = {

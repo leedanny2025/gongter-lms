@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { fbDelete } from '@/lib/firebase';
@@ -381,7 +383,7 @@ export default function TestsPage() {
   useEffect(() => {
     if (state.students.length === 0) loadCol('students');
   }, []);
-  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
+  const [selectedWeek, setSelectedWeek] = useSelectedWeek();
   const [confirmRecord, setConfirmRecord] = useState<TestRecord | null>(null);
   const [editRecord, setEditRecord] = useState<TestRecord | null>(null);
   const [filter, setFilter] = useState<'all' | 'pending' | 'confirmed'>('all');
@@ -494,7 +496,7 @@ export default function TestsPage() {
         ))}
       </div>
 
-      <div className="card" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'pan-x pan-y', display: 'block' }}>
+      <div className="card" style={{ padding: 0, overflowX: 'auto', WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'], touchAction: 'auto', display: 'block' }}>
         <table style={{ minWidth: '100%' }}>
           <thead>
             <tr>

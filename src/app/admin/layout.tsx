@@ -8,6 +8,7 @@ import AdminAuthScreen, { useAdminAuth } from '@/components/AdminAuth';
 import { useStore } from '@/lib/store';
 
 const navItems = [
+  { href: '/admin/weekly-notice', label: '주간 공지', icon: FileText },
   { href: '/admin',            label: '대시보드', icon: LayoutDashboard },
   { href: '/admin/students',   label: '학생',     icon: Users },
   { href: '/admin/attendance', label: '출석',     icon: Calendar },
@@ -77,7 +78,7 @@ function MobileBottomNav({ pathname }: { pathname: string }) {
         overflowY: 'hidden',
         WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
         scrollbarWidth: 'none' as React.CSSProperties['scrollbarWidth'],
-        touchAction: 'pan-x',
+        touchAction: 'auto',
       }}>
         {navItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
@@ -147,7 +148,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
         overflowY: 'auto', overflowX: 'auto',
         WebkitOverflowScrolling: 'touch' as React.CSSProperties['WebkitOverflowScrolling'],
         background: '#f8fafc',
-        touchAction: 'pan-x pan-y',
+        touchAction: 'auto',
       }}>
         <UndoBar />
         {children}

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useStore } from '@/lib/store';
 import { DollarCondition } from '@/lib/types';
 import { Plus, Edit2, Trash2, Save, X, ToggleLeft, ToggleRight, Download, RefreshCw } from 'lucide-react';
-import { getNextWeek, getWeekDateRange } from '@/lib/utils';
+import { getWeekKey, getLearningWeekRange } from '@/lib/utils';
 
 function downloadCSV(filename: string, rows: Record<string, unknown>[]) {
   if (!rows.length) return alert('데이터가 없습니다');
@@ -276,62 +276,12 @@ export default function SettingsPage() {
         </p>
       </div>
 
-      {/* 주간 마무리 */}
-      {(() => {
-        const nextWeek = getNextWeek(state.currentWeek);
-        const { label: curLabel } = getWeekDateRange(state.currentWeek);
-        const { label: nextLabel } = getWeekDateRange(nextWeek);
-        const doReset = () => {
-          if (!confirm(
-            `⚠️ 주간 마무리\n\n현재 주: ${curLabel}\n다음 주: ${nextLabel}\n\n` +
-            `아래 데이터가 모두 삭제됩니다:\n• 숙제 기록\n• 시험 기록\n• 출석 기록\n• 태도 기록\n\n` +
-            `유지되는 데이터:\n• 학생 달러 잔액\n• 학생 정보\n\n계속하시겠습니까?`
-          )) return;
-          dispatch({ type: 'WEEK_RESET', payload: nextWeek });
-          alert(`✅ 주간 마무리 완료!\n${nextLabel}이 시작됩니다.`);
-        };
-        return (
-          <div className="card" style={{ marginTop: 20, background: '#fff1f2', border: '2px solid #fca5a5' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 14 }}>
-              <div style={{ width: 40, height: 40, borderRadius: 10, background: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <RefreshCw size={20} color="white" />
-              </div>
-              <div>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#991b1b' }}>주간 마무리 / 새 주 시작</div>
-                <div style={{ fontSize: 12, color: '#ef4444', marginTop: 2 }}>현재 주: {curLabel} → 다음 주: {nextLabel}</div>
-              </div>
-            </div>
-            <div style={{ background: 'white', borderRadius: 10, padding: '12px 14px', marginBottom: 14, fontSize: 13 }}>
-              <div style={{ fontWeight: 700, color: '#374151', marginBottom: 8 }}>리셋 시 처리 내용</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', marginBottom: 4 }}>🗑 삭제 (주간 데이터)</div>
-                  {['숙제 기록', '시험 기록', '출석 기록', '태도 기록'].map(t => (
-                    <div key={t} style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>· {t}</div>
-                  ))}
-                </div>
-                <div>
-                  <div style={{ fontSize: 11, fontWeight: 700, color: '#16a34a', marginBottom: 4 }}>✅ 유지 (누적 데이터)</div>
-                  {['학생 달러 잔액', '학생 정보', '달러 조건 설정'].map(t => (
-                    <div key={t} style={{ fontSize: 12, color: '#64748b', marginBottom: 2 }}>· {t}</div>
-                  ))}
-                </div>
-              </div>
-            </div>
-            <button
-              onClick={doReset}
-              style={{
-                width: '100%', padding: '14px', borderRadius: 10, border: 'none',
-                background: 'linear-gradient(135deg, #ef4444, #dc2626)',
-                color: 'white', fontWeight: 800, fontSize: 15, cursor: 'pointer',
-                display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8,
-              }}
-            >
-              <RefreshCw size={18} /> 주간 마무리 실행 → {nextLabel} 시작
-            </button>
-          </div>
-        );
-      })()}
+      <section className="card" style={{ marginTop: 20, border: '1px solid #c7d2fe', background: '#eef2ff' }}>
+        <h2 style={{ fontSize: 17, margin: '0 0 10px', color: '#3730a3' }}>금요일 자정 · 새 주 자동 시작</h2>
+        <p style={{ fontSize: 13, lineHeight: 1.8 }}>한국 시간 금요일 24시(토요일 0시)에 이번 주 진행률이 새로 시작됩니다.<br />현재 주: {getLearningWeekRange(state.currentWeek).label}</p>
+        <p style={{ fontSize: 12, color: '#64748b', lineHeight: 1.8 }}>학생 보유 달러, 숙제·시험·출석·태도 기록, 달러 지급·구매 내역은 삭제하지 않습니다. 지난 기록은 주차 선택으로 다시 볼 수 있습니다.</p>
+        <button onClick={() => dispatch({ type: 'WEEK_RESET', payload: getWeekKey() })} style={{ padding: '12px 16px', borderRadius: 10, border: 0, background: '#4f46e5', color: 'white', fontWeight: 700 }}>현재 주 다시 확인</button>
+      </section>
 
       {modal !== false && (
         <ConditionModal condition={modal} onSave={save} onClose={() => setModal(false)} />

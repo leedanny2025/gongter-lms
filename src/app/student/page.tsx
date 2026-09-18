@@ -1,5 +1,6 @@
 'use client';
 
+import { getWeekKey } from '@/lib/utils';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useStore } from '@/lib/store';
@@ -53,6 +54,7 @@ export default function StudentLoginPage() {
     if (!selected) return;
     const correctPin = selected.pin || '1111';
     if (inputPin === correctPin) {
+      sessionStorage.removeItem(`weekly-notice:${selected.id}:${getWeekKey()}`);
       router.push(`/student/${selected.id}`);
     } else {
       setError(true);

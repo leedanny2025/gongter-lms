@@ -5,7 +5,7 @@ import { fbSet, fbDelete, fbGet } from './firebase';
 import { AppData, Student, DollarCondition, DayHomework, TestRecord, AttendanceRecord, AttitudeRecord, MakeupRequest, AttitudeDollarSettings, StudentReport, ShopItem, PurchaseRecord, AwardRecord } from './types';
 import { initialData } from './mockData';
 import { sheetsSync } from './sheets';
-import { getWeekKey } from './utils';
+import { getWeekKey, getNextWeekRollover } from './utils';
 
 type Action =
   | { type: 'ADD_STUDENT'; payload: Student }
@@ -29,7 +29,7 @@ type Action =
   | { type: 'UPDATE_ATTENDANCE'; payload: AttendanceRecord }
   | { type: 'ADD_ATTENDANCE'; payload: AttendanceRecord }
   | { type: 'DELETE_ATTENDANCE'; payload: string }
-  | { type: 'AWARD_DOLLARS'; payload: { studentId: string; amount: number; reason?: string } }
+  | { type: 'AWARD_DOLLARS'; payload: { studentId: string; amount: number; reason?: string; week?: string } }
   | { type: 'ADD_ATTITUDE'; payload: AttitudeRecord }
   | { type: 'UPDATE_ATTITUDE'; payload: AttitudeRecord }
   | { type: 'DELETE_ATTITUDE'; payload: string }
@@ -54,7 +54,7 @@ function toArr<T>(val: unknown): T[] {
   return Object.values(val as object).filter(Boolean) as T[];
 }
 
-function reducer(state: AppData, action: Action): AppData {
+export function reducer(state: AppData, action: Action): AppData {
   switch (action.type) {
     case '_SET': return { ...state, ...action.payload };
     case 'ADD_STUDENT':    return { ...state, students: [...state.students, action.payload] };
@@ -109,14 +109,14 @@ function reducer(state: AppData, action: Action): AppData {
         students: state.students.map(s => s.id === action.payload.studentId ? {
           ...s,
           dollars: Math.max(0, s.dollars + action.payload.amount),
-          weeklyDollarsAwarded: { ...(s.weeklyDollarsAwarded || {}), [state.currentWeek]: action.payload.amount }
+          weeklyDollarsAwarded: { ...(s.weeklyDollarsAwarded || {}), [action.payload.week ?? getWeekKey()]: (s.weeklyDollarsAwarded?.[action.payload.week ?? getWeekKey()] || 0) + action.payload.amount }
         } : s),
         awardRecords: [...(state.awardRecords || []), {
           id: Date.now().toString(),
           studentId: action.payload.studentId,
           studentName: student?.name || '',
           amount: action.payload.amount,
-          week: state.currentWeek,
+          week: action.payload.week ?? getWeekKey(),
           awardedAt: new Date().toISOString(),
         }],
       };
@@ -138,15 +138,7 @@ function reducer(state: AppData, action: Action): AppData {
       };
     }
     case 'SET_WEEK': return { ...state, currentWeek: action.payload };
-    case 'WEEK_RESET': return {
-      ...state,
-      currentWeek: action.payload,
-      dayHomeworks: [],
-      attendanceRecords: [],
-      attitudeRecords: [],
-      makeupRequests: [],
-      students: state.students.map(s => ({ ...s, dollars: 0 })),
-    };
+    case 'WEEK_RESET': return { ...state, currentWeek: getWeekKey() };
     case 'RESET_ATTENDANCE': return { ...state, attendanceRecords: [] };
     case 'RESET_ATTITUDE':   return { ...state, attitudeRecords: [] };
     case 'SAVE_REPORT': return { ...state, reports: [...(state.reports || []).filter(r => r.id !== action.payload.id), action.payload] };
@@ -329,7 +321,7 @@ function applyFirebaseData(data: Record<string, unknown>, dispatch: React.Dispat
     makeupRequests:    toArr<MakeupRequest>(data.makeup),
     reports:           toArr<StudentReport>(data.reports),
     awardRecords:      toArr<AwardRecord>(data.awardRecords),
-    currentWeek:       (data.currentWeek as string | undefined) ?? initialData.currentWeek,
+    currentWeek:       getWeekKey(),
     attitudeDollarSettings: (data.settings as Record<string,unknown>)?.attitudeDollar as AttitudeDollarSettings ?? initialData.attitudeDollarSettings,
     dollarConditions:  fbConditions.length ? fbConditions : initialData.dollarConditions,
     shopItems:         toArr<ShopItem>(data.shopItems),
@@ -339,7 +331,7 @@ function applyFirebaseData(data: Record<string, unknown>, dispatch: React.Dispat
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, rawDispatch] = useReducer(reducer, initialData);
-  const [ready, setReady] = useState(true);
+  const [ready, setReady] = useState(false);
   const stateRef = useRef(state);
   stateRef.current = state;
 
@@ -433,17 +425,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       case 'UPDATE_MAKEUP':
         fbSet(`lms/makeup/${action.payload.id}`, action.payload); break;
       case 'WEEK_RESET':
-        fbSet('lms/homework', null);
-        fbSet('lms/attendance', null);
-        fbSet('lms/attitude', null);
-        fbSet('lms/makeup', null);
-        fbSet('lms/currentWeek', action.payload);
-        snap.students.forEach(st => fbSet(`lms/students/${st.id}`, { ...st, dollars: 0 }));
+        // Progress is scoped by the current learning week; never erase historical data.
         break;
       case 'AWARD_DOLLARS': {
         const student = s.students.find(x => x.id === action.payload.studentId);
         if (student) {
-          const u = { ...student, dollars: Math.max(0, student.dollars + action.payload.amount) };
+          const awardWeek = action.payload.week ?? getWeekKey();
+          const u = { ...student, dollars: Math.max(0, student.dollars + action.payload.amount), weeklyDollarsAwarded: { ...student.weeklyDollarsAwarded, [awardWeek]: (student.weeklyDollarsAwarded?.[awardWeek] || 0) + action.payload.amount } };
           fbSet(`lms/students/${student.id}`, u);
           // awardRecords를 Firebase에 저장
           const awardRecord = {
@@ -451,7 +439,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
             studentId: action.payload.studentId,
             studentName: student.name,
             amount: action.payload.amount,
-            week: stateRef.current.currentWeek,
+            week: action.payload.week ?? getWeekKey(),
             awardedAt: new Date().toISOString(),
           };
           fbSet(`lms/awardRecords/${awardRecord.id}`, awardRecord);
@@ -558,6 +546,19 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (reconnectTimer) clearTimeout(reconnectTimer);
       if (fallbackInterval) clearInterval(fallbackInterval);
     };
+  }, []);
+
+  useEffect(() => {
+    let timer: ReturnType<typeof setTimeout>;
+    const synchronizeWeek = () => {
+      clearTimeout(timer);
+      rawDispatch({ type: '_SET', payload: { currentWeek: getWeekKey() } });
+      timer = setTimeout(synchronizeWeek, Math.max(100, getNextWeekRollover().getTime() - Date.now() + 50));
+    };
+    synchronizeWeek();
+    window.addEventListener('focus', synchronizeWeek);
+    document.addEventListener('visibilitychange', synchronizeWeek);
+    return () => { clearTimeout(timer); window.removeEventListener('focus', synchronizeWeek); document.removeEventListener('visibilitychange', synchronizeWeek); };
   }, []);
 
   const canUndo = undoStackLen > 0;

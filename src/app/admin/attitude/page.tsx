@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { AttitudeRecord, AttitudeDollarSettings, AttitudeDollarTier } from '@/lib/types';
@@ -59,7 +61,7 @@ export default function AttitudePage() {
   const { state, dispatch } = useStore();
   const [tab, setTab] = useState<'daily' | 'weekly'>('daily');
   const [today] = useState(localDateStr());
-  const [viewWeek, setViewWeek] = useState(getWeekKey());
+  const [viewWeek, setViewWeek] = useSelectedWeek();
   const [counts, setCounts] = useState<Record<string, Counts>>({});
   const [saved, setSaved] = useState<Record<string, boolean>>({});
   const [snapshots, setSnapshots] = useState<Record<string, Snapshot>>({});

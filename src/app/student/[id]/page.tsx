@@ -2,8 +2,10 @@
 
 import { useParams } from 'next/navigation';
 import Link from 'next/link';
+import WeeklyAchievementNotice from '@/components/WeeklyAchievementNotice';
+import { getWeeklyProgress as calculateWeeklyProgress } from '@/lib/weekly-progress';
 import { useStore } from '@/lib/store';
-import { getWeekKey, localDateStr } from '@/lib/utils';
+import { getWeekKey, localDateStr, getWeekDateRange, koreanDateStr } from '@/lib/utils';
 import { BookOpen, ClipboardCheck, Calendar, CheckCircle, XCircle, Clock, TrendingUp, Award } from 'lucide-react';
 
 export default function StudentDashboard() {
@@ -14,12 +16,13 @@ export default function StudentDashboard() {
   const student = state.students.find(s => s.id === id);
   if (!student) return <div style={{ padding: 20, textAlign: 'center', color: '#94a3b8' }}>학생을 찾을 수 없습니다</div>;
 
-  const week = getWeekKey();
-  const todayStr = localDateStr();
+  const week = state.currentWeek;
+  const progress = calculateWeeklyProgress(state, student, week);
+  const todayStr = koreanDateStr();
 
   const weekHomework = state.dayHomeworks.filter(h => h.studentId === id && h.week === week);
   const weekTests = state.testRecords.filter(t => t.studentId === id && t.week === week);
-  const weekAttendance = state.attendanceRecords.filter(a => a.studentId === id);
+  const weekAttendance = state.attendanceRecords.filter(a => a.studentId === id && a.date >= progress.range.start && a.date <= progress.range.end);
   const todayAttendance = state.attendanceRecords.find(a => a.studentId === id && a.date === todayStr);
 
   const confirmedTests = state.testRecords.filter(t => t.studentId === id && t.status === 'confirmed' && t.score !== null);
@@ -30,7 +33,7 @@ export default function StudentDashboard() {
   // 오늘 할 일 + 주간 진행 상황
   const dayMap: { [key: string]: number } = { mon: 1, tue: 2, wed: 3, thu: 4, fri: 5, sat: 6, sun: 0 };
   const scheduledDays = student.scheduleDays || [];
-  const today = new Date();
+  const today = new Date(`${todayStr}T12:00:00`);
   const todayDayNum = today.getDay();
 
   // 오늘 할 일
@@ -57,16 +60,15 @@ export default function StudentDashboard() {
 
   // 주간 진행 상황
   const getWeeklyProgress = () => {
-    const weekStart = new Date(today);
-    weekStart.setDate(today.getDate() - today.getDay());
+    const { start: weekStart } = getWeekDateRange(week);
 
     const progress: Array<{ date: string; day: string; dayName: string; attendance: boolean; homework: boolean; test: boolean; scheduled: boolean }> = [];
 
     scheduledDays.forEach((scheduledDay: string) => {
       const dayNum = dayMap[scheduledDay] || 0;
       const taskDate = new Date(weekStart);
-      taskDate.setDate(weekStart.getDate() + dayNum);
-      const dateStr = taskDate.toISOString().split('T')[0];
+      taskDate.setDate(weekStart.getDate() + (dayNum === 6 ? -2 : dayNum === 0 ? -1 : dayNum - 1));
+      const dateStr = localDateStr(taskDate);
 
       const att = state.attendanceRecords.find(a => a.studentId === id && a.date === dateStr);
       const hw = state.dayHomeworks.find(h =>
@@ -82,8 +84,8 @@ export default function StudentDashboard() {
         date: dateStr,
         day: scheduledDay,
         dayName,
-        attendance: !!att,
-        homework: hw ? hw.status === 'approved' : false,
+        attendance: !!att && att.status !== 'absent',
+        homework: hw ? (hw.status === 'approved' || hw.status === 'confirmed') : false,
         test: test ? test.status === 'confirmed' : false,
         scheduled: true,
       });
@@ -94,39 +96,20 @@ export default function StudentDashboard() {
 
   const weeklyProgress = getWeeklyProgress();
 
-  const attDays = weekAttendance.filter(a => a.status !== 'absent').length;
-  const approvedHW = weekHomework.filter(h => h.status === 'approved').length;
+  const attDays = progress.attendanceCount;
+  const approvedHW = progress.homeworkCount;
   const submittedHW = weekHomework.filter(h => h.status === 'pending' || h.status === 'approved').length;
   const pendingHW = weekHomework.filter(h => h.status === 'pending').length;
   const lastTest = weekTests[weekTests.length - 1];
   const scheduledDaysCount = (student?.scheduleDays || []).length;
 
-  const weeklyDollars = state.dollarConditions
-    .filter(c => c.enabled)
-    .reduce((total, c) => {
-      let dollarAmount = 0;
-
-      if (c.type === 'attendance') {
-        // 출석: 수업 일수 중 출석한 날짜만큼 비례 지급
-        dollarAmount = scheduledDaysCount > 0 ? Math.round((attDays / scheduledDaysCount) * c.amount) : 0;
-      } else if (c.type === 'homework') {
-        // 숙제: 기입 + 완료 합산, 수업 일수 만큼만 인정
-        const totalSubmitted = Math.min(submittedHW, scheduledDaysCount);
-        dollarAmount = scheduledDaysCount > 0 ? Math.round((totalSubmitted / scheduledDaysCount) * c.amount) : 0;
-      } else if (c.type === 'test') {
-        dollarAmount = lastTest?.status === 'confirmed' ? c.amount : 0;
-      } else if (c.type === 'attitude') {
-        dollarAmount = 0;
-      }
-
-      return total + dollarAmount;
-    }, 0);
-
-  const maxDollars = state.dollarConditions.filter(c => c.enabled).reduce((s, c) => s + c.amount, 0);
+  const weeklyDollars = progress.earned;
+  const maxDollars = progress.maximum;
   const gradeColor = (pct: number) => pct >= 80 ? '#16a34a' : pct >= 60 ? '#d97706' : '#dc2626';
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <WeeklyAchievementNotice student={student} progress={progress} />
       {/* 오늘 할 일 */}
       {todayTasks && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -232,7 +215,7 @@ export default function StudentDashboard() {
           <div>
             <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginBottom: 4 }}>보유 달러</div>
             <div style={{ fontSize: 48, fontWeight: 900, lineHeight: 1 }}>${student.dollars}</div>
-            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 8 }}>이번 주 예상 +${weeklyDollars}</div>
+            <div style={{ fontSize: 13, color: 'rgba(255,255,255,0.75)', marginTop: 8 }}>이번 주 예상 지급액 ${weeklyDollars}</div>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.15)', borderRadius: 14, padding: '10px 12px', textAlign: 'center' }}>
             <Award size={26} color="white" style={{ display: 'block', margin: '0 auto' }} />
@@ -245,7 +228,7 @@ export default function StudentDashboard() {
             <span>${weeklyDollars} / ${maxDollars}</span>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.2)', borderRadius: 6, height: 8, overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${maxDollars > 0 ? (weeklyDollars / maxDollars) * 100 : 0}%`, background: 'white', borderRadius: 6, transition: 'width 0.5s' }} />
+            <div style={{ height: '100%', width: `${maxDollars > 0 ? Math.min(100, (weeklyDollars / maxDollars) * 100) : 0}%`, background: 'white', borderRadius: 6, transition: 'width 0.5s' }} />
           </div>
         </div>
       </div>
@@ -255,10 +238,8 @@ export default function StudentDashboard() {
         <h3 style={{ margin: '0 0 12px', fontSize: 15, fontWeight: 700 }}>이번 주 달러 조건</h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {state.dollarConditions.filter(c => c.enabled).map(c => {
-            const met = c.type === 'attendance' ? attDays >= 2
-              : c.type === 'homework' ? approvedHW > 0
-              : c.type === 'test' ? lastTest?.status === 'confirmed'
-              : c.type === 'attitude';
+            const achievement = progress.breakdown.find(row => row.id === c.id)!;
+            const met = achievement.met;
             const pending = c.type === 'homework' ? pendingHW > 0
               : c.type === 'test' ? lastTest?.status === 'pending' : false;
 
@@ -274,7 +255,7 @@ export default function StudentDashboard() {
                     {c.type === 'attitude' && '교사 평가'}
                   </div>
                 </div>
-                <span style={{ fontWeight: 800, fontSize: 15, color: met ? '#7c3aed' : '#94a3b8' }}>+${c.amount}</span>
+                <span style={{ fontWeight: 800, fontSize: 15, color: met ? '#7c3aed' : '#94a3b8' }}>${achievement.earned} / ${achievement.maximum}</span>
               </div>
             );
           })}

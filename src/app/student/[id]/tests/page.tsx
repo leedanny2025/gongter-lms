@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState, useRef, useCallback } from 'react';
 import { useParams } from 'next/navigation';
 import { useStore } from '@/lib/store';
@@ -16,7 +18,7 @@ export default function StudentTestPage() {
   const { state, dispatch } = useStore();
 
   const student = state.students.find(s => s.id === id);
-  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
+  const [selectedWeek, setSelectedWeek] = useSelectedWeek();
   const week = selectedWeek;
   const myTests = state.testRecords.filter(t => t.studentId === id);
   const latestTest = myTests[myTests.length - 1];

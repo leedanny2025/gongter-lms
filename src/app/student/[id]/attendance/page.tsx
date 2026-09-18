@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { useRouter } from 'next/navigation';
@@ -19,7 +21,7 @@ export default function StudentAttendancePage() {
   const [checkInTime, setCheckInTime] = useState('');
   const [checkOutTime, setCheckOutTime] = useState('');
   const [status, setStatus] = useState<'present' | 'late' | 'absent'>('present');
-  const [selectedWeek, setSelectedWeek] = useState(getWeekKey());
+  const [selectedWeek, setSelectedWeek] = useSelectedWeek();
 
   const _now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');

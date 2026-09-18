@@ -18,10 +18,10 @@
 
 * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-html { -webkit-text-size-adjust: 100%; }
+html { -webkit-text-size-adjust: 100%; touch-action: auto; }
 
 /* Make buttons and links respond faster to touch */
-button, a { touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+button, a, [role="button"] { touch-action: manipulation; -webkit-tap-highlight-color: rgba(99, 102, 241, 0.16); }
 
 body {
   background: var(--bg);
@@ -224,4 +224,25 @@ tr:hover td { background: #f8fafc; }
 @media print {
   .no-print { display: none !important; }
   body { background: white; }
+}
+
+/* Phones and touch tablets, including iPads wider than the mobile breakpoint.
+   Keep native scrolling/pinch zoom; do not intercept pointer/touch gestures. */
+@media (any-pointer: coarse), (max-width: 1024px) {
+  button, .btn, [role="button"], nav a {
+    min-height: 44px !important;
+    min-width: 44px !important;
+  }
+  input:not([type="checkbox"]):not([type="radio"]), select, textarea {
+    min-height: 44px !important;
+    font-size: 16px !important;
+  }
+  button:active, [role="button"]:active, nav a:active {
+    filter: brightness(0.94);
+  }
+
+}
+button:focus-visible, a:focus-visible, [role="button"]:focus-visible {
+  outline: 3px solid #818cf8;
+  outline-offset: 3px;
 }

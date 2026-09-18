@@ -1,5 +1,7 @@
 'use client';
 
+import { useSelectedWeek } from '@/lib/use-selected-week';
+
 import { useState, useMemo, useEffect } from 'react';
 import { useStore } from '@/lib/store';
 import { CheckCircle, XCircle, Edit2, X, AlertCircle, RotateCcw } from 'lucide-react';
@@ -309,7 +311,7 @@ function HomeworkDetailModal({ hw, onAction, onEdit, onClose }: {
 /* ── Main Page ──────────────────────────────────────────────── */
 export default function HomeworkPage() {
   const { state, dispatch, loadCol, undo, canUndo, undoLabel, undoCount } = useStore();
-  const [week, setWeek] = useState(state.currentWeek);
+  const [week, setWeek] = useSelectedWeek();
   const [refreshing, setRefreshing] = useState(false);
   const [classFilter, setClassFilter] = useState('전체');
   const [nameSearch, setNameSearch] = useState('');
