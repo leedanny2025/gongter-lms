@@ -34,3 +34,18 @@
 .empty { text-align:center; padding:24px; color:#94a3b8; }
 .srOnly { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
 @media (max-width:360px) { .header h1 { font-size:22px; } .table th,.table td { padding-left:3px; padding-right:3px; } .table th:first-child { padding-left:10px; } .table td:last-child { padding-right:8px; } .dollars { font-size:12px; } }
+
+.periods { display:flex; gap:6px; margin-bottom:14px; }
+.periods button { min-width:80px; min-height:44px; border:1px solid #cbd5e1; background:white; color:#475569; border-radius:12px; font-weight:700; cursor:pointer; }
+.periods button[aria-pressed="true"] { background:#3345a0; color:white; border-color:#3345a0; }
+.controls input { min-height:44px; border:1px solid #cbd5e1; padding:8px; border-radius:10px; font-size:16px; }
+.attitude { color:#0369a1; white-space:nowrap; }
+.attitude small { font-size:9px; font-weight:400; margin-left:2px; }
+@media (max-width:600px) {
+  .table.table th,.table.table td { padding:12px 2px !important; font-size:11px; }
+  .table.table th:first-child { padding-left:8px !important; }
+  .table.table td:last-child { padding-right:6px !important; }
+  .count small,.complete small { font-size:8px; }
+  .dollars { font-size:11px; }
+  .dollars small { font-size:8px; }
+}

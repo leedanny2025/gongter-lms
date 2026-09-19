@@ -54,3 +54,14 @@ const noSchedule=getWeeklyProgress(state,{...student,scheduleDays:[]},'2026-W38'
 const disabled=getWeeklyProgress({...state,dollarConditions:[]},student,'2026-W38');assert.equal(disabled.percent,0);
 const awarded = reducer(state,{type:'AWARD_DOLLARS',payload:{studentId:student.id,amount:3,week:'2026-W37'}});assert.equal(awarded.awardRecords.at(-1).week,'2026-W37');
 console.log('PASS: Friday-midnight KST rollover, year boundary, ISO calendars, history exclusion, duplicate days, homework statuses, daily test counts, reward cap, paid/remaining amounts, empty schedule, zero target, non-destructive reset, selected-week awards.');
+const { getMonthlyProgress } = load('src/lib/monthly-progress.ts');
+const monthlyBefore = structuredClone(state);
+let monthly = getMonthlyProgress(state, student, '2026-09');
+assert.equal(monthly.total,9); assert.equal(monthly.attendanceCount,4); assert.equal(monthly.homeworkCount,2); assert.equal(monthly.testCount,1); assert.equal(monthly.awarded,5);
+const edge = {...state, dayHomeworks:[{studentId:student.id,week:'2026-W36',day:'mon',status:'approved'},{studentId:student.id,week:'2026-W36',day:'tue',status:'approved'}], attitudeRecords:[{studentId:student.id,date:'2026-09-01',shadowing:1,learningAttitude:2,basicAttitude:3},{studentId:student.id,date:'2026-09-01',shadowing:2,learningAttitude:2,basicAttitude:3},{studentId:student.id,date:'2026-08-31',shadowing:9,learningAttitude:9,basicAttitude:9}],awardRecords:[{studentId:student.id,amount:7,awardedAt:'2026-08-31T15:00:00Z'},{studentId:student.id,amount:99,awardedAt:'2026-09-30T15:00:00Z'}]};
+monthly=getMonthlyProgress(edge,student,'2026-09');
+assert.equal(monthly.homeworkCount,1);assert.equal(monthly.attitudeScore,7);assert.equal(monthly.awarded,7);
+assert.equal(getMonthlyProgress(state,student,'2026-10').attendanceCount,0);
+assert.equal(getMonthlyProgress(state,{...student,scheduleDays:['thu']},'2024-02').total,5);
+assert.deepEqual(state,monthlyBefore);
+console.log('PASS: calendar months, cross-month homework, KST payment boundary, attitude deduplication, leap year, read-only reporting.');
