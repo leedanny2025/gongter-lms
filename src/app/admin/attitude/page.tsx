@@ -1,5 +1,6 @@
 'use client';
 
+import styles from './page.module.css';
 import { useSelectedWeek } from '@/lib/use-selected-week';
 
 import { useState, useEffect } from 'react';
@@ -253,7 +254,8 @@ export default function AttitudePage() {
 
       {/* 일별 기입 탭 */}
       {tab === 'daily' && (
-        <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className={`card ${styles.scrollRegion}`} role="region" aria-label="태도 점수 표 · 좌우로 스크롤" tabIndex={0}>
+          <div className={styles.rows}>
           {filteredStudents.map((student, i) => {
             const c = counts[student.id] ?? { shadowing: 0, learningAttitude: 0, basicAttitude: 0 };
             const isSaved = saved[student.id];
@@ -302,6 +304,7 @@ export default function AttitudePage() {
           {state.students.length === 0 && (
             <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>등록된 학생이 없습니다</div>
           )}
+          </div>
         </div>
       )}
 
@@ -348,7 +351,8 @@ export default function AttitudePage() {
           </div>
 
           {/* 학생별 주간 합산 */}
-          <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+          <div className={`card ${styles.scrollRegion}`} role="region" aria-label="태도 점수 표 · 좌우로 스크롤" tabIndex={0}>
+          <div className={styles.rows}>
             {filteredStudents.map((student, i) => {
               const total = getWeeklyTotal(student.id, viewWeek);
               const tier = getDollarTier(total);
@@ -403,6 +407,7 @@ export default function AttitudePage() {
             {state.students.length === 0 && (
               <div style={{ padding: 40, textAlign: 'center', color: '#94a3b8' }}>등록된 학생이 없습니다</div>
             )}
+            </div>
           </div>
 
           {/* 전체 지급 버튼 */}
