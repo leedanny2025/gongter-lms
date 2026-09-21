@@ -49,3 +49,9 @@
   .dollars { font-size:11px; }
   .dollars small { font-size:8px; }
 }
+
+.sortButton { width:100%; min-height:44px; padding:4px 0; border:0; background:transparent; color:inherit; font:inherit; font-weight:700; cursor:pointer; }
+.sortButton:focus-visible { outline:2px solid #6366f1; border-radius:6px; }
+.table th[aria-sort="ascending"],.table th[aria-sort="descending"] { color:#4338ca; background:#e0e7ff; }
+.rank { display:block; color:#4f46e5; font-size:10px; font-weight:800; margin-bottom:3px; }
+.sortHint { padding:0 18px; margin:0 0 10px; color:#64748b; font-size:11px; line-height:1.7; }
